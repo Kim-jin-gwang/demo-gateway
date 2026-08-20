@@ -234,7 +234,7 @@
 </div>
 
 <script type="module">
-const SPACE = "https://kimjgwang-cafe-focusing.hf.space";
+const SPACE = new URLSearchParams(location.search).get("api") || "https://kimjgwang-ml-demos.hf.space";
 const $ = (s) => document.querySelector(s);
 const statusEl = $("#status");
 const badge = $("#server-badge");

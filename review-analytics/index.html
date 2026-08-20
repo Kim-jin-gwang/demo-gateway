@@ -107,6 +107,7 @@
   .kw-row .bar { height: 100%; border-radius: 0 4px 4px 0; min-width: 2px; }
   .kw-row .c { font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
   .kw-empty { font-size: 13px; color: var(--text-sub); margin-top: 8px; }
+  .kw-note { font-size: 12px; color: var(--text-sub); margin: -8px 0 4px; }
 
   /* 리뷰별 결과 */
   #review-list { margin-top: 14px; }
@@ -161,8 +162,8 @@
     </div>
 
     <div class="kw-grid">
-      <div class="panel"><h2>긍정 리뷰 키워드 Top 10</h2><div id="kw-pos"></div></div>
-      <div class="panel"><h2>부정 리뷰 키워드 Top 10</h2><div id="kw-neg"></div></div>
+      <div class="panel"><h2>긍정의 이유가 된 키워드</h2><p class="kw-note">부정 리뷰 대비 특징적으로 등장한 단어 (숫자: 등장 리뷰 수)</p><div id="kw-pos"></div></div>
+      <div class="panel"><h2>부정의 이유가 된 키워드</h2><p class="kw-note">긍정 리뷰 대비 특징적으로 등장한 단어 (숫자: 등장 리뷰 수)</p><div id="kw-neg"></div></div>
     </div>
 
     <div class="panel" id="review-list-panel" style="margin-top:14px">
@@ -256,8 +257,8 @@ function render(r) {
   if (r.negative_count) bar.insertAdjacentHTML("beforeend",
     `<div class="seg neg" style="flex:${r.negative_count}" title="부정 ${r.negative_count}건">${negPct >= 12 ? `부정 ${negPct}%` : ""}</div>`);
 
-  renderKeywords("#kw-pos", r.positive_keywords, "var(--pos)");
-  renderKeywords("#kw-neg", r.negative_keywords, "var(--neg)");
+  renderKeywords("#kw-pos", r.positive_keywords, "var(--pos)", ["긍정", "부정"]);
+  renderKeywords("#kw-neg", r.negative_keywords, "var(--neg)", ["부정", "긍정"]);
 
   const list = $("#review-list");
   list.innerHTML = "";
@@ -270,14 +271,15 @@ function render(r) {
   $("#results").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-function renderKeywords(sel, keywords, color) {
+function renderKeywords(sel, keywords, color, [own, other]) {
   const el = $(sel);
   el.innerHTML = "";
   if (!keywords.length) { el.innerHTML = `<div class="kw-empty">추출된 키워드가 없습니다.</div>`; return; }
-  const max = keywords[0].count;
+  const max = Math.max(...keywords.map(k => k.count));
   for (const k of keywords) {
+    const tip = `${own} 리뷰 ${k.count}건 · ${other} 리뷰 ${k.other_count ?? 0}건에 등장`;
     el.insertAdjacentHTML("beforeend",
-      `<div class="kw-row"><span class="w">${escapeHtml(k.word)}</span><span class="track"><span class="bar" style="width:${Math.max(4, k.count / max * 100)}%;background:${color};display:block"></span></span><span class="c">${k.count}</span></div>`);
+      `<div class="kw-row" title="${tip}"><span class="w">${escapeHtml(k.word)}</span><span class="track"><span class="bar" style="width:${Math.max(4, k.count / max * 100)}%;background:${color};display:block"></span></span><span class="c">${k.count}</span></div>`);
   }
 }
 

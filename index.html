@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kim Jin Gwang · Live Demos</title>
+<meta name="description" content="AI·데이터 프로젝트를 라이브 데모로 제공하는 포트폴리오">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --text: #1a1d24;
+    --text-sub: #5b6472;
+    --border: #e4e7ec;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --online: #16a34a;
+    --online-bg: #ecfdf3;
+    --sleep: #d97706;
+    --sleep-bg: #fffbeb;
+    --wip: #64748b;
+    --wip-bg: #f1f5f9;
+    --shadow: 0 1px 2px rgba(16,24,40,.05);
+    --shadow-hover: 0 12px 24px -8px rgba(16,24,40,.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1117;
+      --surface: #171b23;
+      --text: #eef1f6;
+      --text-sub: #9aa4b2;
+      --border: #262c37;
+      --accent: #60a5fa;
+      --accent-soft: #1c2740;
+      --online: #4ade80;
+      --online-bg: #12271a;
+      --sleep: #fbbf24;
+      --sleep-bg: #2b2210;
+      --wip: #94a3b8;
+      --wip-bg: #1e2430;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-hover: 0 12px 24px -8px rgba(0,0,0,.5);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header { padding: 88px 0 56px; }
+  .eyebrow {
+    display: inline-block;
+    font-size: 13px; font-weight: 600; letter-spacing: .06em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 800; letter-spacing: -.02em; }
+  .tagline { margin-top: 12px; font-size: 17px; color: var(--text-sub); max-width: 560px; }
+  .wake-note {
+    margin-top: 20px; font-size: 13.5px; color: var(--text-sub);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wake-note::before { content: "💤"; }
+
+  section h2 {
+    font-size: 14px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-sub);
+    margin-bottom: 20px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 20px;
+    padding-bottom: 72px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    display: flex; flex-direction: column;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+  .thumb {
+    height: 132px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px;
+    user-select: none;
+  }
+  .card-body { padding: 20px 20px 18px; display: flex; flex-direction: column; flex: 1; gap: 10px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card h3 { font-size: 17.5px; font-weight: 700; letter-spacing: -.01em; }
+  .badge {
+    flex-shrink: 0;
+    font-size: 11.5px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge.online { color: var(--online); background: var(--online-bg); }
+  .badge.sleep  { color: var(--sleep);  background: var(--sleep-bg); }
+  .badge.wip    { color: var(--wip);    background: var(--wip-bg); }
+  .desc { font-size: 14px; color: var(--text-sub); flex: 1; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11.5px; font-weight: 500;
+    color: var(--text-sub);
+    border: 1px solid var(--border);
+    padding: 2px 9px; border-radius: 6px;
+  }
+  .actions { display: flex; gap: 8px; margin-top: 6px; }
+  .btn {
+    flex: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13.5px; font-weight: 600;
+    padding: 9px 0; border-radius: 10px;
+    text-decoration: none; cursor: pointer;
+    border: 1px solid transparent;
+    transition: filter .15s ease;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.demo { background: var(--accent); color: #fff; }
+  .btn.demo.disabled {
+    background: var(--wip-bg); color: var(--wip);
+    cursor: default; pointer-events: none;
+  }
+  .btn.gh { background: transparent; color: var(--text); border-color: var(--border); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0 64px;
+    display: flex; flex-wrap: wrap; gap: 16px 32px;
+    align-items: center; justify-content: space-between;
+    color: var(--text-sub); font-size: 14px;
+  }
+  footer .links { display: flex; gap: 20px; }
+  footer a { color: var(--text); text-decoration: none; font-weight: 600; }
+  footer a:hover { color: var(--accent); }
+
+  /* 슬립 서버 웨이크업 오버레이 */
+  #waking {
+    position: fixed; inset: 0;
+    background: rgba(10,12,16,.6); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  #waking.show { display: flex; }
+  #waking .panel {
+    background: var(--surface); color: var(--text);
+    border-radius: 16px; padding: 32px 40px; text-align: center;
+    max-width: 320px; box-shadow: var(--shadow-hover);
+  }
+  #waking .spinner {
+    width: 36px; height: 36px; margin: 0 auto 16px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #waking p { font-size: 14px; color: var(--text-sub); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">LIVE DEMO PORTFOLIO</span>
+    <h1>김진광 <span style="font-weight:500;color:var(--text-sub);font-size:.55em">Kim Jin Gwang</span></h1>
+    <p class="tagline">데이터 파이프라인과 AI를 활용한 프로젝트를 만들고, 직접 체험할 수 있는 라이브 데모로 제공합니다.</p>
+    <p class="wake-note">무료 서버 특성상 데모가 잠들어 있을 수 있어요. 접속 시 자동으로 깨어나며 최대 1분 정도 걸립니다.</p>
+  </header>
+
+  <section>
+    <h2>Works</h2>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer>
+    <span>© 2026 Kim Jin Gwang</span>
+    <div class="links">
+      <a href="https://github.com/Kim-jin-gwang" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:trealight112@gmail.com">Email</a>
+    </div>
+  </footer>
+</div>
+
+<div id="waking">
+  <div class="panel">
+    <div class="spinner"></div>
+    <strong>서버를 깨우는 중…</strong>
+    <p>무료 서버가 슬립 모드에서 깨어나고 있어요.<br>최대 1분 정도 걸릴 수 있습니다.</p>
+  </div>
+</div>
+
+<script>
+// ─── 프로젝트 데이터 ───────────────────────────────────────────
+// 데모가 완성될 때마다 demoUrl / healthUrl 을 채우면 카드가 자동 활성화됩니다.
+// sleeps: true 인 프로젝트는 데모 클릭 시 웨이크업 안내를 띄운 뒤 이동합니다.
+const PROJECTS = [
+  {
+    title: "Bond-EZ",
+    emoji: "📈",
+    gradient: "linear-gradient(135deg,#1e3a8a,#3b82f6)",
+    desc: "개인 투자자를 위한 채권 정보 포털. 채권 시세·신용등급·금리 지표와 Gemini 기반 뉴스 요약, AI 채권 챗봇을 제공합니다.",
+    tags: ["Django", "Vue 3", "PostgreSQL", "Elasticsearch", "Kafka·Spark·Flink"],
+    github: "https://github.com/Kim-jin-gwang/Bond-EZ",
+    demoUrl: null, healthUrl: null, sleeps: true,
+  },
+  {
+    title: "Jukini Market",
+    emoji: "🥬",
+    gradient: "linear-gradient(135deg,#166534,#4ade80)",
+    desc: "산지 직송 농산물을 24시간 한정으로 거래하는 신선식품 마켓. Socket.IO로 구매 현황을 실시간 중계합니다.",
+    tags: ["Node.js", "Express", "Socket.IO", "Sequelize"],
+    github: "https://github.com/Kim-jin-gwang/Jukini-Market",
+    demoUrl: null, healthUrl: null, sleeps: true,
+  },
+  {
+    title: "GreenGlossary",
+    emoji: "🌱",
+    gradient: "linear-gradient(135deg,#065f46,#34d399)",
+    desc: "농림 분야의 어려운 한자어를 쉬운 우리말로 바꿔주는 순화 번역기. KoBERT로 동형이의어를 문맥에 맞게 판별합니다.",
+    tags: ["Flask", "TensorFlow", "KoBERT", "KoNLPy"],
+    github: "https://github.com/Kim-jin-gwang/GreenGlossary",
+    demoUrl: null, healthUrl: null, sleeps: true,
+  },
+  {
+    title: "Review Analytics",
+    emoji: "🛍️",
+    gradient: "linear-gradient(135deg,#7c2d92,#e879f9)",
+    desc: "무신사 상품 리뷰를 GRU 감성분석 모델로 긍정·부정 분류하고, 감성별 핵심 키워드를 시각화합니다.",
+    tags: ["Python", "TensorFlow", "GRU", "Selenium"],
+    github: "https://github.com/Kim-jin-gwang/Shopping-mall-Purchase-Review-Analytics",
+    demoUrl: null, healthUrl: null, sleeps: true,
+  },
+  {
+    title: "Cafe Focusing",
+    emoji: "☕",
+    gradient: "linear-gradient(135deg,#92400e,#fbbf24)",
+    desc: "OpenCV 윤곽선 분석으로 피사체의 정확한 외곽을 찾아 배경만 블러 처리하는 아웃포커싱 이미지 프로세서.",
+    tags: ["Python", "OpenCV", "NumPy"],
+    github: "https://github.com/Kim-jin-gwang/Cafe-Focusing",
+    demoUrl: null, healthUrl: null, sleeps: false,
+  },
+];
+
+// ─── 렌더링 ────────────────────────────────────────────────────
+const grid = document.getElementById("grid");
+PROJECTS.forEach((p, i) => {
+  const hasDemo = !!p.demoUrl;
+  const card = document.createElement("article");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="thumb" style="background:${p.gradient}">${p.emoji}</div>
+    <div class="card-body">
+      <div class="card-head">
+        <h3>${p.title}</h3>
+        <span class="badge ${hasDemo ? "sleep" : "wip"}" id="badge-${i}">${hasDemo ? "확인 중" : "준비 중"}</span>
+      </div>
+      <p class="desc">${p.desc}</p>
+      <div class="tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>
+      <div class="actions">
+        <a class="btn demo ${hasDemo ? "" : "disabled"}" ${hasDemo ? `href="${p.demoUrl}" data-idx="${i}"` : ""}>
+          ${hasDemo ? "라이브 데모" : "데모 준비 중"}
+        </a>
+        <a class="btn gh" href="${p.github}" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>`;
+  grid.appendChild(card);
+});
+
+// ─── 헬스체크: 배지를 온라인/슬립으로 갱신 ─────────────────────
+PROJECTS.forEach(async (p, i) => {
+  if (!p.healthUrl) return;
+  const badge = document.getElementById(`badge-${i}`);
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    await fetch(p.healthUrl, { signal: ctrl.signal, mode: "no-cors" });
+    clearTimeout(timer);
+    badge.className = "badge online";
+    badge.textContent = "온라인";
+  } catch {
+    badge.className = "badge sleep";
+    badge.textContent = "슬립 중";
+  }
+});
+
+// ─── 슬립 서버 클릭 시 웨이크업 안내 ───────────────────────────
+document.addEventListener("click", (e) => {
+  const link = e.target.closest(".btn.demo[data-idx]");
+  if (!link) return;
+  const p = PROJECTS[+link.dataset.idx];
+  const badge = document.getElementById(`badge-${link.dataset.idx}`);
+  if (p.sleeps && badge && badge.textContent !== "온라인") {
+    e.preventDefault();
+    document.getElementById("waking").classList.add("show");
+    setTimeout(() => { location.href = p.demoUrl; }, 2500);
+  }
+});
+</script>
+</body>
+</html>

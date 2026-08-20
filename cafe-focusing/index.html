@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cafe-Focusing · Live Demo</title>
+<meta name="description" content="OpenCV 윤곽선 분석 기반 아웃포커싱 라이브 데모">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --text: #1a1d24; --text-sub: #5b6472;
+    --border: #e4e7ec; --accent: #2563eb; --accent-soft: #eff4ff;
+    --online: #16a34a; --online-bg: #ecfdf3; --sleep: #d97706; --sleep-bg: #fffbeb;
+    --shadow: 0 1px 2px rgba(16,24,40,.05);
+    --shadow-hover: 0 12px 24px -8px rgba(16,24,40,.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1117; --surface: #171b23; --text: #eef1f6; --text-sub: #9aa4b2;
+      --border: #262c37; --accent: #60a5fa; --accent-soft: #1c2740;
+      --online: #4ade80; --online-bg: #12271a; --sleep: #fbbf24; --sleep-bg: #2b2210;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-hover: 0 12px 24px -8px rgba(0,0,0,.5);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header { padding: 44px 0 28px; }
+  .back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13.5px; font-weight: 600; color: var(--text-sub);
+    text-decoration: none; margin-bottom: 18px;
+  }
+  .back:hover { color: var(--accent); }
+  h1 { font-size: clamp(24px, 4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
+  .tagline { margin-top: 8px; font-size: 15.5px; color: var(--text-sub); max-width: 640px; }
+  .meta-links { margin-top: 12px; display: flex; gap: 14px; font-size: 13.5px; }
+  .meta-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  #server-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    color: var(--sleep); background: var(--sleep-bg); vertical-align: 2px; margin-left: 10px;
+  }
+  #server-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  #server-badge.online { color: var(--online); background: var(--online-bg); }
+
+  .layout { display: grid; grid-template-columns: 380px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; box-shadow: var(--shadow);
+  }
+  .panel h2 { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-sub); margin-bottom: 14px; }
+
+  /* 업로드 영역 */
+  #dropzone {
+    border: 2px dashed var(--border); border-radius: 12px;
+    min-height: 170px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    cursor: pointer; text-align: center; padding: 16px;
+    transition: border-color .15s, background .15s;
+    position: relative; overflow: hidden;
+  }
+  #dropzone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+  #dropzone .hint { font-size: 13.5px; color: var(--text-sub); }
+  #dropzone .hint strong { color: var(--text); }
+  #dropzone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--bg); }
+  .upload-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .chipbtn {
+    flex: 1; font-size: 12.5px; font-weight: 600; padding: 7px 0;
+    border: 1px solid var(--border); border-radius: 8px; background: transparent;
+    color: var(--text); cursor: pointer; font-family: inherit;
+  }
+  .chipbtn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* 옵션 */
+  .field { margin-top: 16px; }
+  .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg input { display: none; }
+  .seg span {
+    display: inline-block; font-size: 13px; font-weight: 500;
+    padding: 6px 13px; border: 1px solid var(--border); border-radius: 999px;
+    cursor: pointer; color: var(--text-sub); transition: all .12s;
+  }
+  .seg input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  details { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; }
+  summary { font-size: 13px; font-weight: 600; color: var(--text-sub); cursor: pointer; user-select: none; }
+  .slider-row { display: grid; grid-template-columns: 1fr 42px; gap: 10px; align-items: center; margin-top: 12px; }
+  .slider-row label { grid-column: 1 / -1; font-size: 12.5px; font-weight: 500; color: var(--text-sub); margin-bottom: -6px; }
+  .slider-row input[type=range] { width: 100%; accent-color: var(--accent); }
+  .slider-row output { font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+  #run {
+    width: 100%; margin-top: 20px; padding: 13px 0;
+    font-size: 15px; font-weight: 700; font-family: inherit;
+    background: var(--accent); color: #fff; border: none; border-radius: 12px;
+    cursor: pointer; transition: filter .15s;
+  }
+  #run:hover:not(:disabled) { filter: brightness(1.08); }
+  #run:disabled { opacity: .55; cursor: default; }
+  #status { margin-top: 10px; font-size: 13px; color: var(--text-sub); text-align: center; min-height: 20px; }
+  #status.error { color: #dc2626; }
+
+  /* 결과: before/after 슬라이더 */
+  #result-panel .placeholder {
+    min-height: 320px; display: flex; align-items: center; justify-content: center;
+    color: var(--text-sub); font-size: 14px; text-align: center; padding: 20px;
+  }
+  #compare {
+    position: relative; border-radius: 12px; overflow: hidden;
+    display: none; user-select: none; touch-action: none; background: var(--bg);
+  }
+  #compare img { display: block; width: 100%; pointer-events: none; }
+  #compare .after-clip { position: absolute; inset: 0; overflow: hidden; }
+  #compare .after-clip img { position: absolute; inset: 0; height: 100%; width: auto; max-width: none; }
+  #compare .divider {
+    position: absolute; top: 0; bottom: 0; width: 3px; background: #fff;
+    box-shadow: 0 0 8px rgba(0,0,0,.45); cursor: ew-resize;
+  }
+  #compare .divider::after {
+    content: "◀ ▶"; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); background: #fff; color: #111;
+    font-size: 10px; font-weight: 700; padding: 5px 8px; border-radius: 999px;
+    white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  }
+  .tag-corner {
+    position: absolute; top: 10px; font-size: 11px; font-weight: 700;
+    background: rgba(0,0,0,.55); color: #fff; padding: 3px 9px; border-radius: 999px;
+  }
+  .result-actions { display: none; gap: 8px; margin-top: 12px; }
+  .result-actions a, .result-actions button {
+    flex: 1; text-align: center; font-size: 13.5px; font-weight: 600; font-family: inherit;
+    padding: 9px 0; border-radius: 10px; text-decoration: none; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--text);
+  }
+  .result-actions a:hover, .result-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+  #steps-panel { display: none; margin-top: 22px; }
+  #steps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  #steps-grid figure { margin: 0; }
+  #steps-grid img { width: 100%; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  #steps-grid figcaption { font-size: 11.5px; color: var(--text-sub); text-align: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../">← 전체 프로젝트</a>
+    <h1>☕ Cafe-Focusing <span id="server-badge">서버 확인 중</span></h1>
+    <p class="tagline">OpenCV 윤곽선 분석으로 피사체의 정확한 외곽을 찾아 배경만 블러 처리합니다. 딥러닝 없이 고전 영상처리만으로 비정형 피사체를 아웃포커싱하는 데모예요.</p>
+    <div class="meta-links">
+      <a href="https://github.com/Kim-jin-gwang/Cafe-Focusing" target="_blank" rel="noopener">GitHub 저장소</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- 좌: 입력/옵션 -->
+    <div class="panel">
+      <h2>입력</h2>
+      <div id="dropzone" tabindex="0">
+        <div class="hint"><strong>클릭</strong>하거나 이미지를 <strong>드래그</strong>해서 놓기<br>또는 <strong>Ctrl+V</strong>로 붙여넣기</div>
+      </div>
+      <input type="file" id="file-input" accept="image/*" hidden>
+      <div class="upload-actions">
+        <button class="chipbtn" id="btn-sample">샘플 이미지 사용</button>
+        <button class="chipbtn" id="btn-clear">지우기</button>
+      </div>
+
+      <div class="field">
+        <label>피사체 검출 방식</label>
+        <div class="seg" id="seg-detector">
+          <label><input type="radio" name="detector" value="윤곽선 (Contour)" checked><span>윤곽선 분석</span></label>
+          <label><input type="radio" name="detector" value="Otsu 이진화"><span>Otsu 이진화</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label>배경 효과</label>
+        <div class="seg" id="seg-effect">
+          <label><input type="radio" name="effect" value="블러" checked><span>블러</span></label>
+          <label><input type="radio" name="effect" value="채도 감소"><span>채도 감소</span></label>
+          <label><input type="radio" name="effect" value="어둡게"><span>어둡게</span></label>
+        </div>
+      </div>
+
+      <details>
+        <summary>고급 설정</summary>
+        <div class="slider-row"><label>Canny 하한 임계값</label><input type="range" id="p-canny-low" min="0" max="255" value="40"><output>40</output></div>
+        <div class="slider-row"><label>Canny 상한 임계값</label><input type="range" id="p-canny-high" min="0" max="255" value="150"><output>150</output></div>
+        <div class="slider-row"><label>마스크 팽창 반복</label><input type="range" id="p-dilate" min="0" max="30" value="10"><output>10</output></div>
+        <div class="slider-row"><label>마스크 침식 반복</label><input type="range" id="p-erode" min="0" max="30" value="10"><output>10</output></div>
+        <div class="slider-row"><label>마스크 블러 커널 (홀수)</label><input type="range" id="p-mask-blur" min="1" max="51" step="2" value="21"><output>21</output></div>
+        <div class="slider-row"><label>배경 블러 커널</label><input type="range" id="p-bg-blur" min="3" max="51" step="2" value="13"><output>13</output></div>
+        <div class="slider-row"><label>채도 (채도 감소 효과)</label><input type="range" id="p-sat" min="0" max="1" step="0.05" value="0.3"><output>0.3</output></div>
+        <div class="slider-row"><label>밝기 (어둡게 효과)</label><input type="range" id="p-bright" min="0" max="1" step="0.05" value="0.6"><output>0.6</output></div>
+      </details>
+
+      <button id="run" disabled>아웃포커싱 적용</button>
+      <div id="status"></div>
+    </div>
+
+    <!-- 우: 결과 -->
+    <div>
+      <div class="panel" id="result-panel">
+        <h2>결과 — 슬라이더를 좌우로 움직여 비교</h2>
+        <div class="placeholder" id="result-placeholder">이미지를 업로드하고 "아웃포커싱 적용"을 누르면<br>원본↔결과 비교 화면이 여기에 표시됩니다.</div>
+        <div id="compare">
+          <img id="img-after" alt="아웃포커싱 결과">
+          <div class="after-clip"><img id="img-before" alt="원본"></div>
+          <div class="divider"></div>
+          <span class="tag-corner" style="left:10px">원본</span>
+          <span class="tag-corner" style="right:10px">아웃포커싱</span>
+        </div>
+        <div class="result-actions" id="result-actions">
+          <a id="btn-download" download="cafe-focusing-result.png">결과 다운로드</a>
+        </div>
+      </div>
+
+      <div class="panel" id="steps-panel">
+        <h2>중간 처리 단계</h2>
+        <div id="steps-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const SPACE = "https://kimjgwang-cafe-focusing.hf.space";
+const $ = (s) => document.querySelector(s);
+const statusEl = $("#status");
+const badge = $("#server-badge");
+
+let inputBlob = null;
+let clientPromise = null;
+let ClientMod = null;
+
+// ─── 서버 상태 배지 + gradio 클라이언트 로드 ───────────────────
+(async () => {
+  try {
+    ClientMod = await import("https://cdn.jsdelivr.net/npm/@gradio/client/+esm");
+    clientPromise = ClientMod.Client.connect(SPACE);
+    await clientPromise;
+    badge.textContent = "온라인";
+    badge.classList.add("online");
+  } catch (e) {
+    badge.textContent = "깨우는 중";
+    console.warn("initial connect:", e);
+  }
+})();
+
+// ─── 입력 처리: 클릭 / 드래그 / Ctrl+V / 샘플 ──────────────────
+const dropzone = $("#dropzone");
+const fileInput = $("#file-input");
+
+function setInput(blob) {
+  if (!blob || !blob.type.startsWith("image/")) return;
+  inputBlob = blob;
+  const url = URL.createObjectURL(blob);
+  dropzone.innerHTML = `<img src="${url}" alt="입력 이미지">`;
+  $("#run").disabled = false;
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+}
+
+dropzone.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => setInput(fileInput.files[0]));
+
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault(); dropzone.classList.remove("dragover");
+  setInput(e.dataTransfer.files[0]);
+});
+
+// 붙여넣기: 권한 팝업 없이 paste 이벤트로 처리
+document.addEventListener("paste", (e) => {
+  for (const item of e.clipboardData.items) {
+    if (item.type.startsWith("image/")) { setInput(item.getAsFile()); return; }
+  }
+});
+
+$("#btn-sample").addEventListener("click", async () => {
+  const res = await fetch("sample.png");
+  setInput(await res.blob());
+});
+$("#btn-clear").addEventListener("click", () => {
+  inputBlob = null;
+  dropzone.innerHTML = `<div class="hint"><strong>클릭</strong>하거나 이미지를 <strong>드래그</strong>해서 놓기<br>또는 <strong>Ctrl+V</strong>로 붙여넣기</div>`;
+  $("#run").disabled = true;
+});
+
+// ─── 슬라이더 값 표시 ──────────────────────────────────────────
+document.querySelectorAll(".slider-row input").forEach((r) => {
+  r.addEventListener("input", () => { r.nextElementSibling.value = r.value; });
+});
+
+// ─── 실행 ──────────────────────────────────────────────────────
+const STEP_ORDER_LAST = ["mixed"];
+$("#run").addEventListener("click", async () => {
+  if (!inputBlob) return;
+  const run = $("#run");
+  run.disabled = true;
+  statusEl.classList.remove("error");
+  statusEl.textContent = "처리 중… (서버가 잠들어 있었다면 깨우는 데 최대 1분)";
+
+  try {
+    if (!ClientMod) ClientMod = await import("https://cdn.jsdelivr.net/npm/@gradio/client/+esm");
+    if (!clientPromise) clientPromise = ClientMod.Client.connect(SPACE);
+    const client = await clientPromise;
+
+    const v = (id) => parseFloat($(id).value);
+    const result = await client.predict("/focus_image", [
+      inputBlob,
+      document.querySelector('input[name="detector"]:checked').value,
+      document.querySelector('input[name="effect"]:checked').value,
+      "평균",
+      v("#p-canny-low"), v("#p-canny-high"),
+      v("#p-dilate"), v("#p-erode"),
+      v("#p-mask-blur"), v("#p-bg-blur"),
+      v("#p-sat"), v("#p-bright"),
+      false, true,
+    ]);
+
+    const [resultImg, gallery] = result.data;
+    showResult(URL.createObjectURL(inputBlob), resultImg.url);
+    showSteps(gallery || []);
+    badge.textContent = "온라인";
+    badge.classList.add("online");
+    statusEl.textContent = "완료!";
+  } catch (e) {
+    console.error(e);
+    statusEl.classList.add("error");
+    statusEl.textContent = "처리에 실패했어요. 잠시 후 다시 시도해주세요. (" + (e?.message || e) + ")";
+    clientPromise = null; // 다음 시도에서 재연결
+  } finally {
+    run.disabled = false;
+  }
+});
+
+// ─── 결과 비교 슬라이더 ────────────────────────────────────────
+function showResult(beforeUrl, afterUrl) {
+  $("#result-placeholder").style.display = "none";
+  const cmp = $("#compare");
+  cmp.style.display = "block";
+  $("#img-after").src = afterUrl;
+  $("#img-before").src = beforeUrl;
+  $("#btn-download").href = afterUrl;
+  $("#result-actions").style.display = "flex";
+
+  const after = $("#img-after");
+  after.onload = () => {
+    const clipImg = $("#img-before");
+    clipImg.style.width = cmp.clientWidth + "px";
+    setDivider(0.5);
+  };
+}
+
+function setDivider(ratio) {
+  const cmp = $("#compare");
+  const x = Math.max(0, Math.min(1, ratio)) * cmp.clientWidth;
+  cmp.querySelector(".after-clip").style.width = x + "px";
+  cmp.querySelector(".divider").style.left = (x - 1.5) + "px";
+  cmp.querySelector(".after-clip img").style.width = cmp.clientWidth + "px";
+}
+
+let dragging = false;
+const cmpEl = $("#compare");
+cmpEl.addEventListener("pointerdown", (e) => { dragging = true; moveDivider(e); });
+window.addEventListener("pointermove", (e) => { if (dragging) moveDivider(e); });
+window.addEventListener("pointerup", () => { dragging = false; });
+window.addEventListener("resize", () => { if (cmpEl.style.display === "block") setDivider(0.5); });
+function moveDivider(e) {
+  const rect = cmpEl.getBoundingClientRect();
+  setDivider((e.clientX - rect.left) / rect.width);
+}
+
+// ─── 처리 단계 갤러리 ──────────────────────────────────────────
+function showSteps(gallery) {
+  const grid = $("#steps-grid");
+  grid.innerHTML = "";
+  for (const item of gallery) {
+    const img = item.image || item;
+    const url = img.url || img.path;
+    if (!url) continue;
+    const fig = document.createElement("figure");
+    fig.innerHTML = `<img src="${url}" loading="lazy" alt="${item.caption || ""}"><figcaption>${item.caption || ""}</figcaption>`;
+    grid.appendChild(fig);
+  }
+  $("#steps-panel").style.display = grid.children.length ? "block" : "none";
+}
+</script>
+</body>
+</html>

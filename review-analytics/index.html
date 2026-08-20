@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Analytics · Live Demo</title>
+<meta name="description" content="GRU 감성분석 기반 쇼핑몰 리뷰 분석 라이브 데모">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --text: #1a1d24; --text-sub: #5b6472;
+    --border: #e4e7ec; --accent: #2563eb; --accent-soft: #eff4ff;
+    --online: #16a34a; --online-bg: #ecfdf3; --sleep: #d97706; --sleep-bg: #fffbeb;
+    --pos: #2a78d6; --neg: #eb6834;           /* 감성 팔레트 (CVD 검증 완료) */
+    --pos-bg: #eaf2fc; --neg-bg: #fdf0e9;
+    --shadow: 0 1px 2px rgba(16,24,40,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1117; --surface: #171b23; --text: #eef1f6; --text-sub: #9aa4b2;
+      --border: #262c37; --accent: #60a5fa; --accent-soft: #1c2740;
+      --online: #4ade80; --online-bg: #12271a; --sleep: #fbbf24; --sleep-bg: #2b2210;
+      --pos: #3987e5; --neg: #d95926;
+      --pos-bg: #14233a; --neg-bg: #331c10;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header { padding: 44px 0 28px; }
+  .back { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--text-sub); text-decoration: none; margin-bottom: 18px; }
+  .back:hover { color: var(--accent); }
+  h1 { font-size: clamp(24px, 4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
+  .tagline { margin-top: 8px; font-size: 15.5px; color: var(--text-sub); max-width: 660px; }
+  .meta-links { margin-top: 12px; font-size: 13.5px; }
+  .meta-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  #server-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    color: var(--sleep); background: var(--sleep-bg); vertical-align: 2px; margin-left: 10px;
+  }
+  #server-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  #server-badge.online { color: var(--online); background: var(--online-bg); }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+  .panel h2 { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-sub); margin-bottom: 14px; }
+
+  textarea {
+    width: 100%; min-height: 150px; resize: vertical;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font: inherit; font-size: 14px;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .sample-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .sample-row .label { font-size: 12.5px; color: var(--text-sub); align-self: center; margin-right: 2px; }
+  .chipbtn {
+    font-size: 12.5px; font-weight: 600; padding: 7px 13px;
+    border: 1px solid var(--border); border-radius: 999px; background: transparent;
+    color: var(--text); cursor: pointer; font-family: inherit;
+  }
+  .chipbtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .chipbtn:disabled { opacity: .5; cursor: default; }
+
+  #run {
+    margin-top: 14px; padding: 12px 34px;
+    font-size: 15px; font-weight: 700; font-family: inherit;
+    background: var(--accent); color: #fff; border: none; border-radius: 12px;
+    cursor: pointer; transition: filter .15s;
+  }
+  #run:hover:not(:disabled) { filter: brightness(1.08); }
+  #run:disabled { opacity: .55; cursor: default; }
+  #status { display: inline-block; margin-left: 14px; font-size: 13px; color: var(--text-sub); }
+  #status.error { color: #dc2626; }
+
+  /* ─── 결과 ─── */
+  #results { display: none; margin-top: 22px; }
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
+  .stat .k { font-size: 12.5px; font-weight: 600; color: var(--text-sub); }
+  .stat .v { font-size: 28px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 15px; font-weight: 600; color: var(--text-sub); }
+
+  /* 긍/부정 비율 스택 바 */
+  #ratio-panel { margin-top: 14px; }
+  .legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--text-sub); margin-bottom: 8px; }
+  .legend .key { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 3px; }
+  #ratio-bar { display: flex; gap: 2px; height: 26px; border-radius: 8px; overflow: hidden; }
+  #ratio-bar .seg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; min-width: 0; overflow: hidden; white-space: nowrap; }
+  #ratio-bar .seg.pos { background: var(--pos); border-radius: 8px 0 0 8px; }
+  #ratio-bar .seg.neg { background: var(--neg); border-radius: 0 8px 8px 0; }
+
+  /* 키워드 바 차트 */
+  .kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  @media (max-width: 760px) { .kw-grid { grid-template-columns: 1fr; } }
+  .kw-row { display: grid; grid-template-columns: 74px 1fr 38px; gap: 8px; align-items: center; margin-top: 8px; }
+  .kw-row .w { font-size: 13px; font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kw-row .track { height: 14px; }
+  .kw-row .bar { height: 100%; border-radius: 0 4px 4px 0; min-width: 2px; }
+  .kw-row .c { font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
+  .kw-empty { font-size: 13px; color: var(--text-sub); margin-top: 8px; }
+
+  /* 리뷰별 결과 */
+  #review-list { margin-top: 14px; }
+  .rv { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; border-top: 1px solid var(--border); }
+  .rv:first-of-type { border-top: none; }
+  .rv .badge {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+  .rv .badge.pos { color: var(--pos); background: var(--pos-bg); }
+  .rv .badge.neg { color: var(--neg); background: var(--neg-bg); }
+  .rv .t { font-size: 13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../">← 전체 프로젝트</a>
+    <h1>🛍️ Review Analytics <span id="server-badge">서버 확인 중</span></h1>
+    <p class="tagline">네이버 쇼핑 리뷰 20만 건으로 학습한 GRU 감성분석 모델이 리뷰의 긍정/부정을 분류하고, 감성별 핵심 키워드를 추출합니다. 별점만으로는 보이지 않는 구매 만족도를 읽어내는 데모예요.</p>
+    <div class="meta-links"><a href="https://github.com/Kim-jin-gwang/Shopping-mall-Purchase-Review-Analytics" target="_blank" rel="noopener">GitHub 저장소</a></div>
+  </header>
+
+  <div class="panel">
+    <h2>리뷰 입력 — 한 줄에 하나씩</h2>
+    <textarea id="input" placeholder="배송도 빠르고 옷 질도 너무 좋아요!&#10;사진이랑 색이 달라요. 실망했습니다.&#10;가격 대비 괜찮은데 배송이 좀 늦네요."></textarea>
+    <div class="sample-row" id="sample-row">
+      <span class="label">샘플 리뷰 묶음:</span>
+      <span class="label" id="sample-loading">불러오는 중…</span>
+    </div>
+    <div>
+      <button id="run">감성 분석</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="stat-row">
+      <div class="stat"><div class="k">긍정 비율</div><div class="v" id="s-ratio">–</div></div>
+      <div class="stat"><div class="k">분석한 리뷰</div><div class="v" id="s-total">–</div></div>
+      <div class="stat"><div class="k">긍정 리뷰</div><div class="v" id="s-pos">–</div></div>
+      <div class="stat"><div class="k">부정 리뷰</div><div class="v" id="s-neg">–</div></div>
+    </div>
+
+    <div class="panel" id="ratio-panel">
+      <h2>긍정 · 부정 비율</h2>
+      <div class="legend">
+        <span class="key"><span class="swatch" style="background:var(--pos)"></span>긍정</span>
+        <span class="key"><span class="swatch" style="background:var(--neg)"></span>부정</span>
+      </div>
+      <div id="ratio-bar"></div>
+    </div>
+
+    <div class="kw-grid">
+      <div class="panel"><h2>긍정 리뷰 키워드 Top 10</h2><div id="kw-pos"></div></div>
+      <div class="panel"><h2>부정 리뷰 키워드 Top 10</h2><div id="kw-neg"></div></div>
+    </div>
+
+    <div class="panel" id="review-list-panel" style="margin-top:14px">
+      <h2>리뷰별 판정</h2>
+      <div id="review-list"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const SPACE = new URLSearchParams(location.search).get("api") || "https://kimjgwang-review-analytics.hf.space";
+const $ = (s) => document.querySelector(s);
+const statusEl = $("#status");
+const badge = $("#server-badge");
+
+let ClientMod = null, clientPromise = null;
+async function getClient() {
+  if (!ClientMod) ClientMod = await import("https://cdn.jsdelivr.net/npm/@gradio/client/+esm");
+  if (!clientPromise) clientPromise = ClientMod.Client.connect(SPACE);
+  return clientPromise;
+}
+
+// ─── 초기 연결 + 샘플 세트 로드 ────────────────────────────────
+(async () => {
+  try {
+    const client = await getClient();
+    badge.textContent = "온라인";
+    badge.classList.add("online");
+    const res = await client.predict("/samples", []);
+    renderSampleButtons(res.data[0]);
+  } catch (e) {
+    badge.textContent = "깨우는 중";
+    $("#sample-loading").textContent = "서버가 깨어나면 표시됩니다";
+    console.warn(e);
+  }
+})();
+
+function renderSampleButtons(samples) {
+  const row = $("#sample-row");
+  $("#sample-loading")?.remove();
+  for (const s of samples) {
+    const b = document.createElement("button");
+    b.className = "chipbtn";
+    b.textContent = `${s.name} (${s.reviews.length}건)`;
+    b.title = s.description;
+    b.addEventListener("click", () => { $("#input").value = s.reviews.join("\n"); });
+    row.appendChild(b);
+  }
+}
+
+// ─── 분석 실행 ─────────────────────────────────────────────────
+$("#run").addEventListener("click", async () => {
+  const text = $("#input").value.trim();
+  if (!text) { statusEl.textContent = "리뷰를 입력하거나 샘플을 선택해주세요."; return; }
+  const run = $("#run");
+  run.disabled = true;
+  statusEl.classList.remove("error");
+  const n = text.split("\n").filter(l => l.trim()).length;
+  statusEl.textContent = `${n}건 분석 중… (서버가 잠들어 있었다면 최대 1분)`;
+
+  try {
+    const client = await getClient();
+    const res = await client.predict("/analyze", [text]);
+    render(res.data[0]);
+    badge.textContent = "온라인";
+    badge.classList.add("online");
+    statusEl.textContent = "완료!";
+  } catch (e) {
+    console.error(e);
+    statusEl.classList.add("error");
+    statusEl.textContent = "분석에 실패했어요. 잠시 후 다시 시도해주세요.";
+    clientPromise = null;
+  } finally {
+    run.disabled = false;
+  }
+});
+
+// ─── 렌더링 ────────────────────────────────────────────────────
+function render(r) {
+  $("#results").style.display = "block";
+  $("#s-ratio").innerHTML = `${r.positive_ratio}<small>%</small>`;
+  $("#s-total").innerHTML = `${r.total}<small>건</small>`;
+  $("#s-pos").innerHTML = `${r.positive_count}<small>건</small>`;
+  $("#s-neg").innerHTML = `${r.negative_count}<small>건</small>`;
+
+  const bar = $("#ratio-bar");
+  const posPct = r.positive_ratio, negPct = Math.round((100 - posPct) * 10) / 10;
+  bar.innerHTML = "";
+  if (r.positive_count) bar.insertAdjacentHTML("beforeend",
+    `<div class="seg pos" style="flex:${r.positive_count}" title="긍정 ${r.positive_count}건">${posPct >= 12 ? `긍정 ${posPct}%` : ""}</div>`);
+  if (r.negative_count) bar.insertAdjacentHTML("beforeend",
+    `<div class="seg neg" style="flex:${r.negative_count}" title="부정 ${r.negative_count}건">${negPct >= 12 ? `부정 ${negPct}%` : ""}</div>`);
+
+  renderKeywords("#kw-pos", r.positive_keywords, "var(--pos)");
+  renderKeywords("#kw-neg", r.negative_keywords, "var(--neg)");
+
+  const list = $("#review-list");
+  list.innerHTML = "";
+  for (const item of r.items) {
+    const cls = item.label === "positive" ? "pos" : "neg";
+    const name = item.label === "positive" ? "긍정" : "부정";
+    list.insertAdjacentHTML("beforeend",
+      `<div class="rv"><span class="badge ${cls}">${name} ${item.confidence}%</span><span class="t">${escapeHtml(item.review)}</span></div>`);
+  }
+  $("#results").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function renderKeywords(sel, keywords, color) {
+  const el = $(sel);
+  el.innerHTML = "";
+  if (!keywords.length) { el.innerHTML = `<div class="kw-empty">추출된 키워드가 없습니다.</div>`; return; }
+  const max = keywords[0].count;
+  for (const k of keywords) {
+    el.insertAdjacentHTML("beforeend",
+      `<div class="kw-row"><span class="w">${escapeHtml(k.word)}</span><span class="track"><span class="bar" style="width:${Math.max(4, k.count / max * 100)}%;background:${color};display:block"></span></span><span class="c">${k.count}</span></div>`);
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+</script>
+</body>
+</html>

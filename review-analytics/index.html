@@ -14,6 +14,7 @@
     --online: #16a34a; --online-bg: #ecfdf3; --sleep: #d97706; --sleep-bg: #fffbeb;
     --pos: #2a78d6; --neg: #eb6834;           /* 감성 팔레트 (CVD 검증 완료) */
     --pos-bg: #eaf2fc; --neg-bg: #fdf0e9;
+    --neu: #7b8596; --neu-bg: #eef1f5;
     --shadow: 0 1px 2px rgba(16,24,40,.05);
   }
   @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
       --online: #4ade80; --online-bg: #12271a; --sleep: #fbbf24; --sleep-bg: #2b2210;
       --pos: #3987e5; --neg: #d95926;
       --pos-bg: #14233a; --neg-bg: #331c10;
+      --neu: #8b95a5; --neu-bg: #232936;
       --shadow: 0 1px 2px rgba(0,0,0,.4);
     }
   }
@@ -96,12 +98,23 @@
   #ratio-bar { display: flex; gap: 2px; height: 26px; border-radius: 8px; overflow: hidden; }
   #ratio-bar .seg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; min-width: 0; overflow: hidden; white-space: nowrap; }
   #ratio-bar .seg.pos { background: var(--pos); border-radius: 8px 0 0 8px; }
+  #ratio-bar .seg.neu { background: var(--neu); }
   #ratio-bar .seg.neg { background: var(--neg); border-radius: 0 8px 8px 0; }
+  #ratio-bar .seg:only-child { border-radius: 8px; }
+
+  /* 확신도(점수) 분포 히스토그램 */
+  #hist { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; align-items: end; height: 110px; margin-top: 6px; }
+  #hist .hbar { border-radius: 4px 4px 0 0; min-height: 2px; position: relative; }
+  #hist .hbar .n { position: absolute; top: -18px; left: 0; right: 0; text-align: center; font-size: 10.5px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
+  #hist-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+  .hist-note { font-size: 12px; color: var(--text-sub); margin-top: 8px; }
 
   /* 키워드 바 차트 */
   .kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
   @media (max-width: 760px) { .kw-grid { grid-template-columns: 1fr; } }
-  .kw-row { display: grid; grid-template-columns: 74px 1fr 38px; gap: 8px; align-items: center; margin-top: 8px; }
+  .kw-row { display: grid; grid-template-columns: 74px 1fr 38px; gap: 8px; align-items: center; margin-top: 8px; cursor: pointer; border-radius: 6px; padding: 2px 4px; }
+  .kw-row:hover { background: var(--accent-soft); }
+  .kw-row.active { background: var(--accent-soft); outline: 1px solid var(--accent); }
   .kw-row .w { font-size: 13px; font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .kw-row .track { height: 14px; }
   .kw-row .bar { height: 100%; border-radius: 0 4px 4px 0; min-width: 2px; }
@@ -119,7 +132,16 @@
   }
   .rv .badge.pos { color: var(--pos); background: var(--pos-bg); }
   .rv .badge.neg { color: var(--neg); background: var(--neg-bg); }
+  .rv .badge.neu { color: var(--neu); background: var(--neu-bg); }
   .rv .t { font-size: 13.5px; }
+  .rv .t .sent { border-radius: 4px; padding: 1px 2px; }
+  .rv .t .sent.pos { background: var(--pos-bg); }
+  .rv .t .sent.neg { background: var(--neg-bg); }
+  .rv .t mark { background: var(--accent); color: #fff; border-radius: 3px; padding: 0 3px; }
+  #filter-bar { display: none; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 8px; }
+  #filter-bar .chipbtn { padding: 4px 11px; font-size: 12px; }
+  .sent-legend { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
+  .sent-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin: 0 4px 0 10px; }
 </style>
 </head>
 <body>
@@ -127,7 +149,7 @@
   <header>
     <a class="back" href="../">← 전체 프로젝트</a>
     <h1>🛍️ Review Analytics <span id="server-badge">서버 확인 중</span></h1>
-    <p class="tagline">네이버 쇼핑 리뷰 20만 건으로 학습한 GRU 감성분석 모델이 리뷰의 긍정/부정을 분류하고, 감성별 핵심 키워드를 추출합니다. 별점만으로는 보이지 않는 구매 만족도를 읽어내는 데모예요.</p>
+    <p class="tagline">네이버 쇼핑 리뷰 20만 건으로 학습한 GRU 감성분석 모델이 리뷰를 <strong>문장 단위</strong>로 분석합니다. "옷은 예쁜데 배송이 늦어요" 같은 혼합 리뷰에서도 긍정·부정의 이유를 각각 찾아내고, 확신이 없는 리뷰는 무리하게 판정하지 않아요.</p>
     <div class="meta-links"><a href="https://github.com/Kim-jin-gwang/Shopping-mall-Purchase-Review-Analytics" target="_blank" rel="noopener">GitHub 저장소</a></div>
   </header>
 
@@ -137,6 +159,11 @@
     <div class="sample-row" id="sample-row">
       <span class="label">샘플 리뷰 묶음:</span>
       <span class="label" id="sample-loading">불러오는 중…</span>
+    </div>
+    <div class="sample-row">
+      <button class="chipbtn" id="btn-csv">📄 CSV/텍스트 파일 업로드</button>
+      <input type="file" id="csv-input" accept=".csv,.txt,.tsv" hidden>
+      <span class="label" id="csv-info"></span>
     </div>
     <div>
       <button id="run">감성 분석</button>
@@ -150,24 +177,35 @@
       <div class="stat"><div class="k">분석한 리뷰</div><div class="v" id="s-total">–</div></div>
       <div class="stat"><div class="k">긍정 리뷰</div><div class="v" id="s-pos">–</div></div>
       <div class="stat"><div class="k">부정 리뷰</div><div class="v" id="s-neg">–</div></div>
+      <div class="stat"><div class="k">판단 유보</div><div class="v" id="s-neu">–</div></div>
     </div>
 
     <div class="panel" id="ratio-panel">
-      <h2>긍정 · 부정 비율</h2>
+      <h2>긍정 · 중립 · 부정 비율</h2>
       <div class="legend">
         <span class="key"><span class="swatch" style="background:var(--pos)"></span>긍정</span>
+        <span class="key"><span class="swatch" style="background:var(--neu)"></span>판단 유보 (40~60%)</span>
         <span class="key"><span class="swatch" style="background:var(--neg)"></span>부정</span>
       </div>
       <div id="ratio-bar"></div>
     </div>
 
+    <div class="panel" id="hist-panel" style="margin-top:14px">
+      <h2>모델 확신도 분포</h2>
+      <div id="hist"></div>
+      <div id="hist-axis"><span>부정 확신 ← 0</span><span>0.5 (판단 유보)</span><span>1 → 긍정 확신</span></div>
+      <p class="hist-note">리뷰별 긍정 확률의 분포입니다. 0.5 근처(회색)는 모델이 확신하지 못하는 구간으로, 무리하게 긍/부정으로 판정하지 않습니다.</p>
+    </div>
+
     <div class="kw-grid">
-      <div class="panel"><h2>긍정의 이유가 된 키워드</h2><p class="kw-note">부정 리뷰 대비 특징적으로 등장한 단어 (숫자: 등장 리뷰 수)</p><div id="kw-pos"></div></div>
-      <div class="panel"><h2>부정의 이유가 된 키워드</h2><p class="kw-note">긍정 리뷰 대비 특징적으로 등장한 단어 (숫자: 등장 리뷰 수)</p><div id="kw-neg"></div></div>
+      <div class="panel"><h2>긍정의 이유가 된 키워드</h2><p class="kw-note">부정 문장 대비 특징적으로 등장한 단어 — <strong>클릭하면 해당 리뷰만 필터</strong></p><div id="kw-pos"></div></div>
+      <div class="panel"><h2>부정의 이유가 된 키워드</h2><p class="kw-note">긍정 문장 대비 특징적으로 등장한 단어 — <strong>클릭하면 해당 리뷰만 필터</strong></p><div id="kw-neg"></div></div>
     </div>
 
     <div class="panel" id="review-list-panel" style="margin-top:14px">
-      <h2>리뷰별 판정</h2>
+      <h2>리뷰별 판정 — 문장 단위 감성</h2>
+      <p class="sent-legend">한 리뷰 안에서도 문장마다 감성을 따로 분석합니다:<span class="sw" style="background:var(--pos-bg)"></span>긍정 문장<span class="sw" style="background:var(--neg-bg)"></span>부정 문장</p>
+      <div id="filter-bar"><span id="filter-desc"></span><button class="chipbtn" id="filter-reset">전체 보기</button></div>
       <div id="review-list"></div>
     </div>
   </div>
@@ -241,34 +279,110 @@ $("#run").addEventListener("click", async () => {
   }
 });
 
+// ─── CSV / 텍스트 파일 업로드 ──────────────────────────────────
+$("#btn-csv").addEventListener("click", () => $("#csv-input").click());
+$("#csv-input").addEventListener("change", async () => {
+  const file = $("#csv-input").files[0];
+  if (!file) return;
+  const text = await file.text();
+  const reviews = extractReviews(text, file.name);
+  if (!reviews.length) { $("#csv-info").textContent = "리뷰를 찾지 못했어요."; return; }
+  $("#input").value = reviews.join("\n");
+  $("#csv-info").textContent = `${file.name}에서 ${reviews.length}건 불러옴 (최대 200건 분석)`;
+  $("#csv-input").value = "";
+});
+
+// 따옴표를 인식하는 최소 CSV 파서 — 평균 길이가 가장 긴 열을 리뷰 열로 추정
+function extractReviews(text, filename) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return [];
+  if (!/\.csv$/i.test(filename) || !lines[0].includes(",")) {
+    return lines.map(l => l.trim());
+  }
+  const rows = lines.map(parseCsvLine);
+  const cols = Math.max(...rows.map(r => r.length));
+  let best = 0, bestAvg = -1;
+  for (let c = 0; c < cols; c++) {
+    const vals = rows.map(r => r[c] || "");
+    const avg = vals.reduce((a, v) => a + v.length, 0) / vals.length;
+    if (avg > bestAvg) { bestAvg = avg; best = c; }
+  }
+  const out = rows.map(r => (r[best] || "").trim()).filter(Boolean);
+  // 첫 행이 헤더로 보이면 제거
+  if (out.length > 1 && out[0].length < 20 && !/[.!?요다]$/.test(out[0])) out.shift();
+  return out;
+}
+
+function parseCsvLine(line) {
+  const out = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ",") { out.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
 // ─── 렌더링 ────────────────────────────────────────────────────
+let lastResult = null;
+let activeKeyword = null;
+
+const LABEL_META = {
+  positive: { cls: "pos", name: "긍정" },
+  negative: { cls: "neg", name: "부정" },
+  neutral:  { cls: "neu", name: "중립" },
+};
+
 function render(r) {
+  lastResult = r;
+  activeKeyword = null;
   $("#results").style.display = "block";
+  const neu = r.neutral_count ?? 0;
   $("#s-ratio").innerHTML = `${r.positive_ratio}<small>%</small>`;
   $("#s-total").innerHTML = `${r.total}<small>건</small>`;
   $("#s-pos").innerHTML = `${r.positive_count}<small>건</small>`;
   $("#s-neg").innerHTML = `${r.negative_count}<small>건</small>`;
+  $("#s-neu").innerHTML = `${neu}<small>건</small>`;
 
   const bar = $("#ratio-bar");
-  const posPct = r.positive_ratio, negPct = Math.round((100 - posPct) * 10) / 10;
   bar.innerHTML = "";
-  if (r.positive_count) bar.insertAdjacentHTML("beforeend",
-    `<div class="seg pos" style="flex:${r.positive_count}" title="긍정 ${r.positive_count}건">${posPct >= 12 ? `긍정 ${posPct}%` : ""}</div>`);
-  if (r.negative_count) bar.insertAdjacentHTML("beforeend",
-    `<div class="seg neg" style="flex:${r.negative_count}" title="부정 ${r.negative_count}건">${negPct >= 12 ? `부정 ${negPct}%` : ""}</div>`);
+  const segs = [
+    ["pos", "긍정", r.positive_count],
+    ["neu", "판단 유보", neu],
+    ["neg", "부정", r.negative_count],
+  ];
+  for (const [cls, name, count] of segs) {
+    if (!count) continue;
+    const pct = Math.round(count / r.total * 1000) / 10;
+    bar.insertAdjacentHTML("beforeend",
+      `<div class="seg ${cls}" style="flex:${count}" title="${name} ${count}건">${pct >= 14 ? `${name} ${pct}%` : ""}</div>`);
+  }
 
+  renderHistogram(r.items);
   renderKeywords("#kw-pos", r.positive_keywords, "var(--pos)", ["긍정", "부정"]);
   renderKeywords("#kw-neg", r.negative_keywords, "var(--neg)", ["부정", "긍정"]);
-
-  const list = $("#review-list");
-  list.innerHTML = "";
-  for (const item of r.items) {
-    const cls = item.label === "positive" ? "pos" : "neg";
-    const name = item.label === "positive" ? "긍정" : "부정";
-    list.insertAdjacentHTML("beforeend",
-      `<div class="rv"><span class="badge ${cls}">${name} ${item.confidence}%</span><span class="t">${escapeHtml(item.review)}</span></div>`);
-  }
+  renderList();
   $("#results").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function renderHistogram(items) {
+  const bins = Array(10).fill(0);
+  for (const it of items) bins[Math.min(9, Math.floor(it.score * 10))]++;
+  const max = Math.max(...bins, 1);
+  const hist = $("#hist");
+  hist.innerHTML = "";
+  bins.forEach((n, i) => {
+    const color = i < 4 ? "var(--neg)" : i >= 6 ? "var(--pos)" : "var(--neu)";
+    const h = n ? Math.max(8, n / max * 100) : 2;
+    hist.insertAdjacentHTML("beforeend",
+      `<div class="hbar" style="height:${h}%;background:${color};opacity:${n ? 1 : .25}" title="${(i / 10).toFixed(1)}~${((i + 1) / 10).toFixed(1)}: ${n}건">${n ? `<span class="n">${n}</span>` : ""}</div>`);
+  });
 }
 
 function renderKeywords(sel, keywords, color, [own, other]) {
@@ -277,10 +391,68 @@ function renderKeywords(sel, keywords, color, [own, other]) {
   if (!keywords.length) { el.innerHTML = `<div class="kw-empty">추출된 키워드가 없습니다.</div>`; return; }
   const max = Math.max(...keywords.map(k => k.count));
   for (const k of keywords) {
-    const tip = `${own} 리뷰 ${k.count}건 · ${other} 리뷰 ${k.other_count ?? 0}건에 등장`;
-    el.insertAdjacentHTML("beforeend",
-      `<div class="kw-row" title="${tip}"><span class="w">${escapeHtml(k.word)}</span><span class="track"><span class="bar" style="width:${Math.max(4, k.count / max * 100)}%;background:${color};display:block"></span></span><span class="c">${k.count}</span></div>`);
+    const tip = `${own} 문장 ${k.count}곳 · ${other} 문장 ${k.other_count ?? 0}곳에 등장 — 클릭하면 해당 리뷰만 표시`;
+    const row = document.createElement("div");
+    row.className = "kw-row";
+    row.title = tip;
+    row.dataset.word = k.word;
+    row.innerHTML = `<span class="w">${escapeHtml(k.word)}</span><span class="track"><span class="bar" style="width:${Math.max(4, k.count / max * 100)}%;background:${color};display:block"></span></span><span class="c">${k.count}</span>`;
+    row.addEventListener("click", () => setKeywordFilter(k.word === activeKeyword ? null : k.word));
+    el.appendChild(row);
   }
+}
+
+function setKeywordFilter(word) {
+  activeKeyword = word;
+  document.querySelectorAll(".kw-row").forEach(el =>
+    el.classList.toggle("active", el.dataset.word === word));
+  renderList();
+  if (word) $("#review-list-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+$("#filter-reset").addEventListener("click", () => setKeywordFilter(null));
+
+function renderList() {
+  if (!lastResult) return;
+  const list = $("#review-list");
+  list.innerHTML = "";
+  let items = lastResult.items;
+  if (activeKeyword) {
+    items = items.filter(it => (it.words || []).includes(activeKeyword));
+    $("#filter-bar").style.display = "flex";
+    $("#filter-desc").innerHTML = `키워드 <strong>'${escapeHtml(activeKeyword)}'</strong> 포함 리뷰 ${items.length}건`;
+  } else {
+    $("#filter-bar").style.display = "none";
+  }
+  for (const item of items) {
+    const meta = LABEL_META[item.label] || LABEL_META.neutral;
+    list.insertAdjacentHTML("beforeend",
+      `<div class="rv"><span class="badge ${meta.cls}">${meta.name} ${item.confidence}%</span><span class="t">${renderSentences(item)}</span></div>`);
+  }
+  if (!items.length) list.innerHTML = `<div class="kw-empty">해당 키워드를 포함한 리뷰가 없습니다.</div>`;
+}
+
+// 문장 단위 감성 색칠 + 활성 키워드 하이라이트
+function renderSentences(item) {
+  const parts = item.sentences?.length
+    ? item.sentences
+    : [{ text: item.review, score: item.score }];
+  return parts.map(s => {
+    const cls = s.score > 0.6 ? "pos" : s.score < 0.4 ? "neg" : "";
+    let html = escapeHtml(s.text);
+    if (activeKeyword) html = highlightWord(html, activeKeyword);
+    return `<span class="sent ${cls}" title="문장 긍정 확률 ${(s.score * 100).toFixed(0)}%">${html}</span>`;
+  }).join(" ");
+}
+
+// 형태소 원형(작다)이 활용형(작아서)과 다를 수 있어 원형→어간 순으로 시도.
+// 필터로 좁혀진 리뷰 안에서의 시각 보조라 짧은 어간도 허용한다.
+function highlightWord(html, word) {
+  for (const w of [word, word.replace(/다$/, "")]) {
+    if (w && html.includes(w)) {
+      return html.split(w).join(`<mark>${w}</mark>`);
+    }
+  }
+  return html;
 }
 
 function escapeHtml(s) {

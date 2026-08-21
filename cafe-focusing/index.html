@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cafe-Focusing · Live Demo</title>
-<meta name="description" content="OpenCV 윤곽선 분석 기반 아웃포커싱 라이브 데모">
+<meta name="description" content="클래식 OpenCV와 U2-Net 딥러닝 세그멘테이션 기반 아웃포커싱 라이브 데모">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -73,6 +73,13 @@
   #dropzone .hint { font-size: 13.5px; color: var(--text-sub); }
   #dropzone .hint strong { color: var(--text); }
   #dropzone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--bg); }
+  #dropzone.gc-mode { cursor: crosshair; }
+  #gc-box {
+    position: absolute; display: none; z-index: 2; pointer-events: none;
+    border: 2px solid #22c55e; background: rgba(34, 197, 94, .16);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.25); border-radius: 4px;
+  }
+  .gc-hint { display: none; margin-top: 7px; font-size: 12px; color: var(--online); font-weight: 600; }
   .upload-actions { display: flex; gap: 8px; margin-top: 10px; }
   .chipbtn {
     flex: 1; font-size: 12.5px; font-weight: 600; padding: 7px 0;
@@ -157,7 +164,7 @@
   <header>
     <a class="back" href="../">← 전체 프로젝트</a>
     <h1>☕ Cafe-Focusing <span id="server-badge">서버 확인 중</span></h1>
-    <p class="tagline">OpenCV 윤곽선 분석으로 피사체의 정확한 외곽을 찾아 배경만 블러 처리합니다. 딥러닝 없이 고전 영상처리만으로 비정형 피사체를 아웃포커싱하는 데모예요.</p>
+    <p class="tagline">피사체만 남기고 배경을 흐리는 아웃포커싱 데모입니다. 고전 영상처리(윤곽선·Otsu·GrabCut)와 U2-Net 딥러닝 세그멘테이션을 같은 이미지로 비교해보세요. 보케 블러로 실제 렌즈 빛망울 느낌도 낼 수 있어요.</p>
     <div class="meta-links">
       <a href="https://github.com/Kim-jin-gwang/Cafe-Focusing" target="_blank" rel="noopener">GitHub 저장소</a>
     </div>
@@ -179,9 +186,12 @@
       <div class="field">
         <label>피사체 검출 방식</label>
         <div class="seg" id="seg-detector">
-          <label><input type="radio" name="detector" value="윤곽선 (Contour)" checked><span>윤곽선 분석</span></label>
+          <label><input type="radio" name="detector" value="AI 세그멘테이션 (U2-Net)" checked><span>AI 세그멘테이션</span></label>
+          <label><input type="radio" name="detector" value="윤곽선 (Contour)"><span>윤곽선 분석</span></label>
           <label><input type="radio" name="detector" value="Otsu 이진화"><span>Otsu 이진화</span></label>
+          <label><input type="radio" name="detector" value="GrabCut (박스 지정)"><span>GrabCut 박스</span></label>
         </div>
+        <div class="gc-hint" id="gc-hint">↑ 입력 이미지 위에서 피사체 영역을 드래그해 지정하세요</div>
       </div>
       <div class="field">
         <label>배경 효과</label>
@@ -189,6 +199,15 @@
           <label><input type="radio" name="effect" value="블러" checked><span>블러</span></label>
           <label><input type="radio" name="effect" value="채도 감소"><span>채도 감소</span></label>
           <label><input type="radio" name="effect" value="어둡게"><span>어둡게</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>블러 종류</label>
+        <div class="seg" id="seg-blur-type">
+          <label><input type="radio" name="blurtype" value="평균" checked><span>평균</span></label>
+          <label><input type="radio" name="blurtype" value="가우시안"><span>가우시안</span></label>
+          <label><input type="radio" name="blurtype" value="보케"><span>보케 ✨</span></label>
         </div>
       </div>
 
@@ -265,13 +284,18 @@ function setInput(blob) {
   if (!blob || !blob.type.startsWith("image/")) return;
   inputBlob = blob;
   const url = URL.createObjectURL(blob);
-  dropzone.innerHTML = `<img src="${url}" alt="입력 이미지">`;
+  dropzone.innerHTML = `<img src="${url}" alt="입력 이미지"><div id="gc-box"></div>`;
+  dropzone.querySelector("img").addEventListener("load", updateGcOverlay);
   $("#run").disabled = false;
   statusEl.textContent = "";
   statusEl.classList.remove("error");
+  updateGcOverlay();
 }
 
-dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("click", () => {
+  if (gcDrawing || (isGrabCut() && inputBlob)) return; // GrabCut 모드에선 드래그가 박스 지정
+  fileInput.click();
+});
 fileInput.addEventListener("change", () => setInput(fileInput.files[0]));
 
 dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
@@ -296,7 +320,79 @@ $("#btn-clear").addEventListener("click", () => {
   inputBlob = null;
   dropzone.innerHTML = `<div class="hint"><strong>클릭</strong>하거나 이미지를 <strong>드래그</strong>해서 놓기<br>또는 <strong>Ctrl+V</strong>로 붙여넣기</div>`;
   $("#run").disabled = true;
+  updateGcOverlay();
 });
+
+// ─── GrabCut 박스 지정 (이미지 위 드래그) ──────────────────────
+let gcRect = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 }; // 이미지 기준 정규화 좌표
+let gcDrawing = false;
+let gcStart = null;
+
+const isGrabCut = () => document.querySelector('input[name="detector"]:checked').value === "GrabCut (박스 지정)";
+
+// object-fit: contain으로 표시된 이미지의 실제 콘텐츠 영역(dropzone 기준 px)
+function imageContentBox() {
+  const img = dropzone.querySelector("img");
+  if (!img || !img.naturalWidth) return null;
+  const dw = dropzone.clientWidth, dh = dropzone.clientHeight;
+  const scale = Math.min(dw / img.naturalWidth, dh / img.naturalHeight);
+  const cw = img.naturalWidth * scale, ch = img.naturalHeight * scale;
+  return { ox: (dw - cw) / 2, oy: (dh - ch) / 2, cw, ch };
+}
+
+function updateGcOverlay() {
+  const box = dropzone.querySelector("#gc-box");
+  dropzone.classList.toggle("gc-mode", isGrabCut() && !!inputBlob);
+  $("#gc-hint").style.display = isGrabCut() ? "block" : "none";
+  if (!box) return;
+  const cb = imageContentBox();
+  if (!isGrabCut() || !cb) { box.style.display = "none"; return; }
+  box.style.display = "block";
+  box.style.left = (cb.ox + gcRect.x * cb.cw) + "px";
+  box.style.top = (cb.oy + gcRect.y * cb.ch) + "px";
+  box.style.width = (gcRect.w * cb.cw) + "px";
+  box.style.height = (gcRect.h * cb.ch) + "px";
+}
+
+function pointerToImageCoord(e) {
+  const cb = imageContentBox();
+  if (!cb) return null;
+  const r = dropzone.getBoundingClientRect();
+  const x = (e.clientX - r.left - cb.ox) / cb.cw;
+  const y = (e.clientY - r.top - cb.oy) / cb.ch;
+  return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+}
+
+dropzone.addEventListener("pointerdown", (e) => {
+  if (!isGrabCut() || !inputBlob) return;
+  const p = pointerToImageCoord(e);
+  if (!p) return;
+  gcDrawing = true;
+  gcStart = p;
+  gcRect = { x: p.x, y: p.y, w: 0, h: 0 };
+  dropzone.setPointerCapture(e.pointerId);
+  updateGcOverlay();
+});
+dropzone.addEventListener("pointermove", (e) => {
+  if (!gcDrawing) return;
+  const p = pointerToImageCoord(e);
+  if (!p) return;
+  gcRect = {
+    x: Math.min(gcStart.x, p.x), y: Math.min(gcStart.y, p.y),
+    w: Math.abs(p.x - gcStart.x), h: Math.abs(p.y - gcStart.y),
+  };
+  updateGcOverlay();
+});
+dropzone.addEventListener("pointerup", () => {
+  if (!gcDrawing) return;
+  setTimeout(() => { gcDrawing = false; }, 0); // click 핸들러보다 늦게 해제
+  if (gcRect.w < 0.03 || gcRect.h < 0.03) gcRect = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
+  updateGcOverlay();
+});
+
+document.querySelectorAll('input[name="detector"]').forEach((r) =>
+  r.addEventListener("change", updateGcOverlay));
+window.addEventListener("resize", updateGcOverlay);
 
 // ─── 슬라이더 값 표시 ──────────────────────────────────────────
 document.querySelectorAll(".slider-row input").forEach((r) => {
@@ -322,12 +418,13 @@ $("#run").addEventListener("click", async () => {
       inputBlob,
       document.querySelector('input[name="detector"]:checked').value,
       document.querySelector('input[name="effect"]:checked').value,
-      "평균",
+      document.querySelector('input[name="blurtype"]:checked').value,
       v("#p-canny-low"), v("#p-canny-high"),
       v("#p-dilate"), v("#p-erode"),
       v("#p-mask-blur"), v("#p-bg-blur"),
       v("#p-sat"), v("#p-bright"),
       false, true,
+      gcRect.x * 100, gcRect.y * 100, gcRect.w * 100, gcRect.h * 100,
     ]);
 
     const [resultImg, gallery] = result.data;

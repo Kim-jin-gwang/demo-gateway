@@ -279,7 +279,7 @@ PROJECTS.forEach((p, i) => {
       <p class="desc">${p.desc}</p>
       <div class="tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>
       <div class="actions">
-        <a class="btn demo ${hasDemo ? "" : "disabled"}" ${hasDemo ? `href="${p.demoUrl}" data-idx="${i}"` : ""}>
+        <a class="btn demo ${hasDemo ? "" : "disabled"}" ${hasDemo ? `href="${p.demoUrl}" target="_blank" rel="noopener" data-idx="${i}"` : ""}>
           ${hasDemo ? "라이브 데모" : "데모 준비 중"}
         </a>
         <a class="btn gh" href="${p.github}" target="_blank" rel="noopener">GitHub</a>
@@ -314,7 +314,10 @@ document.addEventListener("click", (e) => {
   if (p.sleeps && badge && badge.textContent !== "온라인") {
     e.preventDefault();
     document.getElementById("waking").classList.add("show");
-    setTimeout(() => { location.href = p.demoUrl; }, 2500);
+    setTimeout(() => {
+      window.open(p.demoUrl, "_blank", "noopener");
+      document.getElementById("waking").classList.remove("show");
+    }, 2500);
   }
 });
 </script>

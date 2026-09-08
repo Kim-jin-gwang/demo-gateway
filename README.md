@@ -9,10 +9,15 @@
 ```text
 demo-gateway/
 ├── index.html            # 게이트웨이 메인 (프로젝트 카드 목록)
-└── cafe-focusing/        # Cafe-Focusing 전용 데모 프론트엔드
-    ├── index.html        #   드래그앤드롭·Ctrl+V 입력, 원본↔결과 비교 슬라이더
-    └── sample.png        #   원클릭 체험용 샘플 이미지
+├── cafe-focusing/        # Cafe-Focusing 전용 데모 프론트엔드
+│   ├── index.html        #   드래그앤드롭·Ctrl+V 입력, 원본↔결과 비교 슬라이더
+│   └── sample.png        #   원클릭 체험용 샘플 이미지
+├── greenglossary/        # GreenGlossary 데모 프론트엔드
+└── review-analytics/     # Review Analytics 데모 프론트엔드
 ```
+
+외부 호스팅 데모(카드에서 절대 URL로 연결): Bond-EZ → Cloudflare Pages + Render, Jukini Market → Render,
+eye-dont-care → Cloudflare Pages(`eye-dont-care.pages.dev`, 브라우저 내 목 백엔드로 동작하는 정적 데모).
 
 데모 프론트엔드는 **화면은 Cloudflare, 연산은 Hugging Face Spaces API**로 분리된 2-티어 구조입니다. 각 데모 페이지는 게이트웨이와 동일한 디자인 토큰(색·폰트·다크모드)을 사용하고, 브라우저에서 `@gradio/client`로 해당 HF Space의 API를 직접 호출합니다.
 

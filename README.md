@@ -63,6 +63,7 @@
 | 프로젝트 | 데모 화면 | 연산·백엔드 |
 |---|---|---|
 | **VerMap** | 이 저장소 `vermap/` | 없음 — 화면 안에서 만든 예시 자료로 동작하는 정적 데모 |
+| **멍고반점** | 이 저장소 `meonggo/` | 없음 — Android 앱의 주요 화면을 예시 자료로 옮긴 정적 데모 |
 | **Cafe Focusing** | 이 저장소 `cafe-focusing/` | Hugging Face Space (GreenGlossary와 같은 Space 공유) |
 | **GreenGlossary** | 이 저장소 `greenglossary/` | Hugging Face Space (Cafe Focusing과 같은 Space 공유) |
 | **Review Analytics** | 이 저장소 `review-analytics/` | Hugging Face Space (전용) |
@@ -97,9 +98,10 @@
 demo-gateway/
 ├── index.html            # 게이트웨이 메인 — PROJECTS 배열 · 카드 렌더링 · 헬스체크 · 웨이크업 안내
 ├── cafe-focusing/        # Cafe-Focusing 전용 데모 프론트엔드
-├── vermap/               # VerMap 화면 데모 (대시보드 · 버전 히트맵 · 버전 리플레이)
 │   ├── index.html        #   드래그 앤 드롭·Ctrl+V 입력, 원본↔결과 비교 슬라이더
 │   └── sample.png        #   원클릭 체험용 샘플 이미지
+├── vermap/               # VerMap 화면 데모 (대시보드 · 버전 히트맵 · 버전 리플레이)
+├── meonggo/              # 멍고반점 화면 데모 (실종 등록 · 유사도 분석 · 입양 소개팅)
 ├── greenglossary/        # GreenGlossary 데모 프론트엔드
 │   └── index.html        #   문장 입력 → 순화 결과·바뀐 용어 표시
 └── review-analytics/     # Review Analytics 데모 프론트엔드

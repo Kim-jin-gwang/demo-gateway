@@ -1,8 +1,11 @@
 # 🚪 라이브 데모 게이트웨이 (demo-gateway)
 
 > **프로젝트 라이브 데모를 한곳에 모았습니다.**
+>
 > **Project Date:** 2026.08 ~ 2026.09 · **개인 프로젝트**
+>
 > **Platform:** 정적 웹 (HTML · CSS · JavaScript) · Cloudflare · Hugging Face Spaces API
+>
 > **Live:** https://demo-gateway.trealight112.workers.dev/
 
 여러 프로젝트의 라이브 데모를 **카드 목록 한 페이지**로 보여 주는 포트폴리오 사이트입니다. 빌드 과정이 없는 정적 사이트로 Cloudflare에 배포되며, push할 때마다 자동으로 재배포됩니다.

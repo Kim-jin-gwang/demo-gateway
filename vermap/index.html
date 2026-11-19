@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VerMap · Live Demo</title>
+<meta name="description" content="설비별 SW 버전 현황을 대시보드·히트맵·리플레이로 보여 주는 VerMap의 화면 데모 (목 데이터)">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --ink: #142033; --sub: #5b6880; --primary: #3c5ce9; --primary-dark: #2f49c4; --canvas: #f5f6f8;
+    --line: #e1e4ea; --soft: #f9fafb; --accent-soft: #e8ebfc; --surface: #ffffff;
+    --t-strong-bg: #a9dbbd; --t-strong-ink: #14532d;
+    --t-ok-bg: #d4ebdf; --t-ok-ink: #246b4a;
+    --t-warn-bg: #fbe5a3; --t-warn-ink: #856009;
+    --t-bad-bg: #fce2e7; --t-bad-ink: #ad344d;
+    --t-none-bg: #f0f3f8; --t-none-ink: #5b6880;
+    --risk: #d2334f;
+    --shadow: 0 1px 2px rgba(20,32,51,.05), 0 4px 16px rgba(20,32,51,.04);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--canvas); color: var(--ink);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; word-break: keep-all;
+  }
+  button, select { font: inherit; color: inherit; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* 안내 띠 */
+  .notice {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 9px 20px; background: var(--ink); color: #dfe5f1; font-size: 12.5px;
+  }
+  .notice a { color: #fff; text-decoration: none; font-weight: 600; opacity: .85; }
+  .notice a:hover { opacity: 1; }
+  .notice .tag { background: rgba(255,255,255,.14); padding: 2px 9px; border-radius: 999px; font-weight: 600; color: #fff; }
+  .notice .grow { flex: 1; min-width: 200px; }
+
+  /* 앱 틀 */
+  .app { display: grid; grid-template-columns: 224px 1fr; min-height: calc(100vh - 38px); }
+  .side { background: var(--surface); border-right: 1px solid var(--line); padding: 22px 14px; position: sticky; top: 0; align-self: start; height: calc(100vh - 38px); }
+  .brand { padding: 4px 10px 22px; }
+  .brand b { display: block; font-size: 25px; font-weight: 900; letter-spacing: .04em; color: var(--primary); line-height: 1; }
+  .brand span { display: block; margin-top: 5px; font-size: 8.5px; font-weight: 700; letter-spacing: .2em; color: var(--primary); }
+  .menu { display: flex; flex-direction: column; gap: 2px; }
+  .menu button {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--sub); font-weight: 500; cursor: pointer;
+  }
+  .menu button:hover { background: var(--soft); color: var(--ink); }
+  .menu button.on { background: var(--accent-soft); color: var(--primary); font-weight: 700; }
+  .menu button svg { width: 17px; height: 17px; flex: none; }
+  .menu .sep { height: 1px; background: var(--line); margin: 10px 8px; }
+  .menu .off { cursor: default; opacity: .45; }
+  .menu .off:hover { background: transparent; color: var(--sub); }
+  .menu small { margin-left: auto; font-size: 10px; font-weight: 600; }
+
+  main { padding: 26px 32px 60px; min-width: 0; }
+  .page { display: none; }
+  .page.on { display: block; animation: rise .25s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 16px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .filters { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+  .field label { font-size: 11.5px; font-weight: 700; color: var(--sub); }
+  .field select {
+    height: 36px; padding: 0 30px 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235b6880' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
+  .field select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+  .kpi { padding: 16px 18px; }
+  .kpi span { display: block; font-size: 12px; font-weight: 600; color: var(--sub); }
+  .kpi b { display: block; margin-top: 6px; font-size: 27px; font-weight: 800; letter-spacing: -.02em; }
+  .kpi.lead { background: var(--accent-soft); border-color: #cfd6fa; }
+  .kpi.lead b { color: var(--primary); }
+  .kpi em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--sub); margin-left: 6px; }
+  .kpi.risk b { color: var(--risk); }
+
+  .panel { padding: 18px; overflow-x: auto; }
+  .tabs { display: inline-flex; flex-wrap: wrap; padding: 3px; background: var(--canvas); border-radius: 9px; gap: 2px; }
+  .tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; }
+  .tabs button.on { background: var(--primary); color: #fff; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 12px; font-size: 12px; color: var(--sub); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .legend .rk i { background: transparent; border: 2px solid var(--risk); }
+
+  /* 대시보드 표 */
+  .matrix { width: 100%; border-collapse: separate; border-spacing: 5px; table-layout: fixed; }
+  .matrix th { font-size: 12px; font-weight: 700; color: var(--sub); padding: 8px 4px; background: var(--soft); border-radius: 8px; }
+  .matrix th.row { text-align: left; padding-left: 12px; }
+  .matrix th.row small { display: block; font-weight: 500; font-size: 11px; opacity: .8; }
+  .matrix td { height: 54px; border-radius: 8px; text-align: center; cursor: pointer; transition: transform .12s, box-shadow .12s; position: relative; }
+  .matrix td:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(20,32,51,.12); }
+  .matrix td.sel { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .matrix td b { display: block; font-size: 15px; font-weight: 800; }
+  .matrix td small { font-size: 11px; opacity: .8; }
+  .matrix td.empty { background: transparent; color: #b6bdca; cursor: default; box-shadow: none; transform: none; }
+  .matrix td .flag { position: absolute; top: 5px; right: 7px; font-size: 10px; font-weight: 800; color: var(--risk); }
+  .tone-strong { background: var(--t-strong-bg); color: var(--t-strong-ink); }
+  .tone-ok { background: var(--t-ok-bg); color: var(--t-ok-ink); }
+  .tone-warn { background: var(--t-warn-bg); color: var(--t-warn-ink); }
+  .tone-bad { background: var(--t-bad-bg); color: var(--t-bad-ink); }
+  .tone-none { background: var(--t-none-bg); color: var(--t-none-ink); }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+  .detail { padding: 16px 18px; position: sticky; top: 16px; }
+  .detail h3 { font-size: 14px; font-weight: 800; }
+  .detail p.hint { margin-top: 8px; font-size: 13px; color: var(--sub); }
+  .detail ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow: auto; }
+  .detail li { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font-size: 12.5px; }
+  .detail li b { font-weight: 700; }
+  .detail li span { color: var(--sub); }
+  .detail li .pill { margin-left: auto; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .kv { margin-top: 12px; display: grid; grid-template-columns: 84px 1fr; gap: 8px 10px; font-size: 13px; }
+  .kv dt { color: var(--sub); }
+  .kv dd { font-weight: 600; }
+  .riskbox { margin-top: 12px; padding: 10px 12px; border-radius: 9px; background: #fff1f3; color: var(--risk); font-size: 12.5px; font-weight: 600; }
+
+  /* 히트맵 */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; }
+  .check input { width: 15px; height: 15px; accent-color: var(--primary); }
+  .group { margin-top: 16px; }
+  .group h4 { font-size: 13px; font-weight: 800; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
+  .group h4 small { font-size: 11.5px; font-weight: 600; color: var(--sub); }
+  .tiles { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tile {
+    width: 74px; height: 44px; border-radius: 7px; border: 2px solid transparent; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2;
+    font-size: 10.5px; font-weight: 700; transition: background-color .45s ease, color .45s ease, transform .12s, box-shadow .12s;
+  }
+  .tile small { font-size: 9.5px; font-weight: 600; opacity: .75; }
+  .tile:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(20,32,51,.16); }
+  .tile.risk { border-color: var(--risk); }
+  .tile.sel { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .tile.pop { animation: pop .5s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 100% { transform: scale(1); } }
+
+  /* 그래프 */
+  .chart { width: 100%; height: auto; display: block; }
+  .chart text { font-family: inherit; font-size: 11px; fill: var(--sub); }
+  .chart .val { font-size: 12px; font-weight: 800; fill: var(--ink); }
+  .chartwrap { padding-top: 6px; }
+
+  /* 리플레이 */
+  .player { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 18px; }
+  .play { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--primary); color: #fff; cursor: pointer; display: grid; place-items: center; }
+  .play:hover { background: var(--primary-dark); }
+  .play svg { width: 18px; height: 18px; }
+  .speed { display: inline-flex; padding: 3px; background: var(--canvas); border-radius: 8px; }
+  .speed button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--sub); cursor: pointer; }
+  .speed button.on { background: var(--surface); color: var(--primary); box-shadow: 0 1px 2px rgba(20,32,51,.12); }
+  .track { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+  .track input { width: 100%; accent-color: var(--primary); cursor: pointer; }
+  .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); }
+  .ticks span.on { color: var(--primary); font-weight: 800; }
+  .now { text-align: right; }
+  .now b { display: block; font-size: 26px; font-weight: 800; color: var(--primary); letter-spacing: -.02em; line-height: 1.1; }
+  .now span { font-size: 12px; font-weight: 600; color: var(--sub); }
+  .replay-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 14px; margin-top: 14px; align-items: start; }
+
+  footer { margin-top: 26px; font-size: 12px; color: var(--sub); }
+
+  @media (max-width: 1080px) {
+    .app { grid-template-columns: 1fr; }
+    .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 14px; }
+    .brand { padding-bottom: 12px; }
+    .menu { flex-direction: row; flex-wrap: wrap; }
+    .menu button { width: auto; }
+    .menu .sep, .menu .off { display: none; }
+    main { padding: 20px 16px 48px; }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .split, .replay-grid { grid-template-columns: 1fr; }
+    .detail { position: static; }
+    .matrix { table-layout: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="notice">
+  <a href="../">← 전체 프로젝트</a>
+  <span class="tag">화면 데모</span>
+  <span class="grow">Windows 데스크톱 프로그램의 주요 화면을 웹으로 옮긴 데모입니다. 표시되는 사업장·설비·버전은 모두 임의로 만든 예시 자료입니다.</span>
+</div>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>VERMAP</b><span>VERSION TRACKING MONITOR</span></div>
+    <nav class="menu" id="menu">
+      <button data-page="dashboard" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</button>
+      <button data-page="heatmap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>버전 히트맵</button>
+      <button data-page="replay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></svg>버전 리플레이</button>
+      <div class="sep"></div>
+      <button class="off" disabled>아이템 매니저<small>데스크톱</small></button>
+      <button class="off" disabled>AI 분석<small>데스크톱</small></button>
+      <button class="off" disabled>데이터 가져오기<small>데스크톱</small></button>
+      <button class="off" disabled>데이터 관리<small>데스크톱</small></button>
+      <button class="off" disabled>보고서<small>데스크톱</small></button>
+    </nav>
+  </aside>
+
+  <main>
+    <!-- 대시보드 -->
+    <section class="page on" id="page-dashboard">
+      <h1>대시보드</h1>
+      <div class="card filters">
+        <div class="field"><label for="f-date">기준날짜</label><select id="f-date"></select></div>
+        <div class="field"><label for="f-area">분류</label><select id="f-area"><option value="">전체</option><option>Mass</option><option>Flex</option></select></div>
+        <div class="field"><label for="f-site">사업장</label><select id="f-site"><option value="">전체</option></select></div>
+        <div class="field"><label for="f-group">설비군</label><select id="f-group"><option value="">전체</option></select></div>
+      </div>
+      <div class="kpis" id="dash-kpis"></div>
+      <div class="split">
+        <div class="card panel">
+          <div class="tabs" id="dash-tabs">
+            <button data-tab="matrix" class="on">히트맵</button>
+            <button data-tab="bar">막대 그래프</button>
+            <button data-tab="line">꺾은선 그래프</button>
+            <button data-tab="donut">원형 그래프</button>
+          </div>
+          <div id="dash-body"></div>
+        </div>
+        <div class="card detail" id="dash-detail"></div>
+      </div>
+    </section>
+
+    <!-- 버전 히트맵 -->
+    <section class="page" id="page-heatmap">
+      <h1>버전 히트맵</h1>
+      <div class="kpis" id="heat-kpis"></div>
+      <div class="split">
+        <div class="card panel">
+          <div class="toolbar">
+            <div class="tabs" id="heat-tabs">
+              <button data-by="site" class="on">사업장</button>
+              <button data-by="line">라인</button>
+              <button data-by="group">설비군</button>
+            </div>
+            <label class="check"><input type="checkbox" id="heat-risk">위험 후보만</label>
+            <label class="check"><input type="checkbox" id="heat-below">목표 미달만</label>
+          </div>
+          <div class="legend" id="heat-legend"></div>
+          <div id="heat-body"></div>
+        </div>
+        <div class="card detail" id="heat-detail"></div>
+      </div>
+    </section>
+
+    <!-- 버전 리플레이 -->
+    <section class="page" id="page-replay">
+      <h1>버전 리플레이</h1>
+      <div class="card player">
+        <button class="play" id="rp-play" aria-label="재생"></button>
+        <div class="speed" id="rp-speed">
+          <button data-ms="1600">0.5×</button><button data-ms="800" class="on">1×</button><button data-ms="400">2×</button><button data-ms="200">4×</button>
+        </div>
+        <div class="track">
+          <input type="range" id="rp-range" min="0" max="5" step="1" value="0" aria-label="재생 위치">
+          <div class="ticks" id="rp-ticks"></div>
+        </div>
+        <div class="now"><b class="num" id="rp-rate">—</b><span id="rp-date">—</span></div>
+      </div>
+      <div class="replay-grid">
+        <div class="card panel"><div class="legend" style="margin-top:0"><span>목표 버전 달성률 추이</span></div><div class="chartwrap" id="rp-chart"></div></div>
+        <div class="card panel"><div class="legend" id="rp-legend" style="margin-top:0"></div><div id="rp-body"></div></div>
+      </div>
+    </section>
+
+    <footer>VerMap · 설비별 SW 버전을 목표 버전과 비교해 현황·위험·추이를 보여 주는 프로그램의 화면 데모</footer>
+  </main>
+</div>
+
+<script>
+/* ── 예시 자료 만들기 (고정된 씨앗으로 매번 같은 값) ───────────────────── */
+function rng(seed) { return () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const rand = rng(20261119);
+const pick = list => list[Math.floor(rand() * list.length)];
+
+const DATES = ["2026-06-01", "2026-07-01", "2026-08-01", "2026-09-01", "2026-10-01", "2026-11-01"];
+const SITES = [
+  { name: "다솜", lines: [["33L", "Mass"], ["35L", "Mass"], ["36L", "Mass"], ["37L", "Mass"], ["21L", "Flex"], ["25L", "Flex"]] },
+  { name: "나봄", lines: [["K1", "Mass"], ["K2", "Mass"], ["K3", "Mass"], ["K4", "Mass"], ["Q5", "Flex"]] },
+  { name: "가람", lines: [["W2", "Flex"]] },
+];
+const GROUPS = [
+  { name: "B3", category: "PLATE", prefix: "v1.2", code: "EQB" },
+  { name: "B4", category: "PLATE", prefix: "v4.6", code: "EQC" },
+  { name: "U2", category: "OPTIC", prefix: "v2.3", code: "EQU" },
+  { name: "U3", category: "OPTIC", prefix: "v3.5", code: "EQV" },
+  { name: "U5", category: "OPTIC", prefix: "v5.2", code: "EQW" },
+  { name: "Jig Ux", category: "KILN", prefix: "v7.1", code: "EQJ" },
+  { name: "Dock U2", category: "KILN", prefix: "v8.0", code: "EQD" },
+];
+GROUPS.forEach(g => { g.versions = [0, 1, 2, 3, 4, 5].map(i => `${g.prefix}.${i + 1}`); });   // 다섯 번째가 목표 N
+const TARGET = 4;
+const RISKS = [
+  { group: "B4", index: 3, reason: "결함이 확인되어 사용 중지로 등록한 버전" },
+  { group: "U5", index: 1, reason: "안전 필수 항목이 들어가지 않은 버전" },
+  { group: "B3", index: 2, reason: "안전 필수 항목이 들어가지 않은 버전" },
+];
+// 목표 N에 도달하는 달(0~5). 6 이상이면 기간 안에 도달하지 못한다. 달성률이 약 22% → 72%로 오르도록 나눔.
+const REACH = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8];
+const EQUIPMENT = [];
+let serial = 100;
+for (const site of SITES) for (const [line, area] of site.lines) for (const group of GROUPS) {
+  if (area === "Flex" && group.category === "KILN") continue;
+  if (site.name === "가람" && rand() < 0.4) continue;
+  const count = 1 + Math.floor(rand() * 3);
+  for (let n = 0; n < count; n++) {
+    const reach = pick(REACH), plus = rand() < 0.28;
+    const history = DATES.map((_, month) => {
+      if (month >= reach) return plus && month >= reach + 2 ? 5 : TARGET;
+      const gap = reach - month;
+      return Math.max(1, TARGET - (gap >= 3 ? 2 : 1) - (gap >= 5 ? 1 : 0));
+    });
+    EQUIPMENT.push({ code: `${group.code}-${++serial}`, site: site.name, line, area, group: group.name, history });
+  }
+}
+const groupOf = name => GROUPS.find(g => g.name === name);
+const TIERS = [
+  { key: "strong", label: "N+1 이상", test: i => i > TARGET },
+  { key: "ok", label: "N", test: i => i === TARGET },
+  { key: "warn", label: "N-1", test: i => i === TARGET - 1 },
+  { key: "bad", label: "N-2 이하", test: i => i <= TARGET - 2 },
+];
+const tierOf = index => TIERS.find(t => t.test(index));
+const riskOf = (eq, month) => RISKS.find(r => r.group === eq.group && r.index === eq.history[month]);
+const met = (eq, month) => eq.history[month] >= TARGET;
+const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : null;
+const fmtPct = v => v === null ? "—" : v.toFixed(1) + "%";
+const toneOfRate = v => v === null ? "none" : v >= 100 ? "strong" : v >= 75 ? "ok" : v >= 40 ? "warn" : "bad";
+const legendHtml = () => TIERS.map(t => `<span><i style="background:var(--t-${t.key}-bg)"></i>${t.label}</span>`).join("") + `<span class="rk"><i></i>위험 후보</span>`;
+const $ = id => document.getElementById(id);
+
+/* ── 공통: 메뉴 ───────────────────────────────────────────────────────── */
+$("menu").addEventListener("click", e => {
+  const button = e.target.closest("button[data-page]");
+  if (!button) return;
+  document.querySelectorAll("#menu button").forEach(b => b.classList.toggle("on", b === button));
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "page-" + button.dataset.page));
+  if (button.dataset.page !== "replay") stop();
+  window.scrollTo({ top: 0 });
+});
+
+function kpiHtml(list, month) {
+  const total = list.length, done = list.filter(e => met(e, month)).length, risky = list.filter(e => riskOf(e, month)).length;
+  return `<div class="card kpi lead"><span>목표 N 이상 달성률</span><b class="num">${fmtPct(pct(done, total))}</b></div>
+    <div class="card kpi"><span>분석 대상</span><b class="num">${total}<em>대</em></b></div>
+    <div class="card kpi"><span>목표 미달</span><b class="num">${total - done}<em>대</em></b></div>
+    <div class="card kpi risk"><span>위험 후보</span><b class="num">${risky}<em>대</em></b></div>`;
+}
+function equipmentDetail(eq, month) {
+  const group = groupOf(eq.group), index = eq.history[month], tier = tierOf(index), risk = riskOf(eq, month);
+  return `<h3>${eq.code}</h3>
+    <dl class="kv">
+      <dt>위치</dt><dd>${eq.site} · ${eq.line} · ${eq.area}</dd>
+      <dt>설비군</dt><dd>${eq.group} <span style="color:var(--sub);font-weight:500">(${group.category})</span></dd>
+      <dt>현재 버전</dt><dd class="num">${group.versions[index]}</dd>
+      <dt>목표 버전</dt><dd class="num">${group.versions[TARGET]}</dd>
+      <dt>판정</dt><dd><span class="pill tone-${tier.key}">${tier.label}</span></dd>
+    </dl>
+    ${risk ? `<div class="riskbox">위험 후보 · ${risk.reason}</div>` : ""}
+    <p class="hint">기준날짜 ${DATES[month]} 현재 상태입니다.</p>`;
+}
+
+/* ── 대시보드 ─────────────────────────────────────────────────────────── */
+const dash = { tab: "matrix", cell: null };
+DATES.forEach((d, i) => $("f-date").add(new Option(d, i)));
+$("f-date").value = DATES.length - 1;
+SITES.forEach(s => $("f-site").add(new Option(s.name, s.name)));
+GROUPS.forEach(g => $("f-group").add(new Option(g.name, g.name)));
+["f-date", "f-area", "f-site", "f-group"].forEach(id => $(id).addEventListener("change", () => { dash.cell = null; renderDash(); }));
+$("dash-tabs").addEventListener("click", e => {
+  const button = e.target.closest("button"); if (!button) return;
+  dash.tab = button.dataset.tab;
+  document.querySelectorAll("#dash-tabs button").forEach(b => b.classList.toggle("on", b === button));
+  renderDash();
+});
+function dashList() {
+  const area = $("f-area").value, site = $("f-site").value, group = $("f-group").value;
+  return EQUIPMENT.filter(e => (!area || e.area === area) && (!site || e.site === site) && (!group || e.group === group));
+}
+function renderDash() {
+  const month = +$("f-date").value, list = dashList();
+  $("dash-kpis").innerHTML = kpiHtml(list, month);
+  const body = $("dash-body");
+  if (dash.tab === "matrix") body.innerHTML = `<div class="legend">${["strong", "ok", "warn", "bad"].map((k, i) => `<span><i style="background:var(--t-${k}-bg)"></i>${["전원 달성", "75% 이상", "40% 이상", "40% 미만"][i]}</span>`).join("")}<span style="color:var(--risk);font-weight:700">! 위험 후보 포함</span></div>` + matrixHtml(list, month);
+  else if (dash.tab === "bar") body.innerHTML = `<div class="legend"><span>설비군별 목표 N 이상 달성률</span></div><div class="chartwrap">${barChart(list, month)}</div>`;
+  else if (dash.tab === "line") body.innerHTML = `<div class="legend"><span>기준일별 목표 N 이상 달성률</span></div><div class="chartwrap">${lineChart(list, month)}</div>`;
+  else body.innerHTML = `<div class="legend">${legendHtml()}</div><div class="chartwrap">${donutChart(list, month)}</div>`;
+  renderDashDetail(list, month);
+}
+function matrixHtml(list, month) {
+  const groups = GROUPS.filter(g => list.some(e => e.group === g.name));
+  const rows = []; for (const s of SITES) for (const [line] of s.lines) if (list.some(e => e.site === s.name && e.line === line)) rows.push([s.name, line]);
+  if (!rows.length) return `<p style="padding:30px 0;text-align:center;color:var(--sub)">조건에 맞는 설비가 없습니다.</p>`;
+  let html = `<table class="matrix"><thead><tr><th class="row">사업장 / 라인</th>${groups.map(g => `<th>${g.name}</th>`).join("")}<th>전체</th></tr></thead><tbody>`;
+  for (const [site, line] of rows) {
+    const inRow = list.filter(e => e.site === site && e.line === line);
+    html += `<tr><th class="row">${site}<small>${line}</small></th>`;
+    for (const g of [...groups.map(g => g.name), null]) {
+      const cell = g ? inRow.filter(e => e.group === g) : inRow;
+      if (!cell.length) { html += `<td class="empty">—</td>`; continue; }
+      const done = cell.filter(e => met(e, month)).length, rate = pct(done, cell.length), key = `${site}|${line}|${g || ""}`;
+      html += `<td class="tone-${toneOfRate(rate)} ${dash.cell === key ? "sel" : ""}" data-key="${key}"><b class="num">${fmtPct(rate)}</b><small class="num">${done}/${cell.length}대</small>${cell.some(e => riskOf(e, month)) ? `<span class="flag">!</span>` : ""}</td>`;
+    }
+    html += `</tr>`;
+  }
+  return html + `</tbody></table>`;
+}
+$("dash-body").addEventListener("click", e => {
+  const cell = e.target.closest("td[data-key]"); if (!cell) return;
+  dash.cell = cell.dataset.key; renderDash();
+});
+function renderDashDetail(list, month) {
+  const box = $("dash-detail");
+  if (!dash.cell || dash.tab !== "matrix") {
+    const below = list.filter(e => !met(e, month)).sort((a, b) => a.history[month] - b.history[month]).slice(0, 8);
+    box.innerHTML = `<h3>업그레이드 우선 설비</h3><p class="hint">목표에서 가장 뒤처진 순서입니다. 표의 칸을 누르면 그 칸의 설비가 나옵니다.</p>${listHtml(below, month)}`;
+    return;
+  }
+  const [site, line, group] = dash.cell.split("|");
+  const cell = list.filter(e => e.site === site && e.line === line && (!group || e.group === group)).sort((a, b) => a.history[month] - b.history[month]);
+  box.innerHTML = `<h3>${site} · ${line}${group ? " · " + group : ""}</h3><p class="hint">설비 ${cell.length}대, 목표 달성 ${cell.filter(e => met(e, month)).length}대</p>${listHtml(cell, month)}`;
+}
+function listHtml(list, month) {
+  if (!list.length) return `<p class="hint">해당하는 설비가 없습니다.</p>`;
+  return `<ul>${list.map(e => { const t = tierOf(e.history[month]), g = groupOf(e.group);
+    return `<li><div><b>${e.code}</b><br><span class="num">${g.versions[e.history[month]]} → ${g.versions[TARGET]}</span></div><span class="pill tone-${t.key}">${t.label}${riskOf(e, month) ? " · 위험" : ""}</span></li>`; }).join("")}</ul>`;
+}
+function barChart(list, month) {
+  const data = GROUPS.map(g => { const c = list.filter(e => e.group === g.name); return { name: g.name, rate: pct(c.filter(e => met(e, month)).length, c.length), n: c.length }; }).filter(d => d.n);
+  const W = 760, H = 320, L = 44, B = 40, T = 24, bw = (W - L - 20) / Math.max(data.length, 1);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="설비군별 달성률 막대 그래프">`;
+  for (const v of [0, 25, 50, 75, 100]) { const y = T + (H - T - B) * (1 - v / 100); svg += `<line x1="${L}" x2="${W - 10}" y1="${y}" y2="${y}" stroke="#e8ebf1"/><text x="${L - 8}" y="${y + 4}" text-anchor="end">${v}%</text>`; }
+  data.forEach((d, i) => { const h = (H - T - B) * d.rate / 100, x = L + i * bw + bw * 0.22, y = H - B - h, tone = toneOfRate(d.rate);
+    svg += `<rect x="${x}" y="${y}" width="${bw * 0.56}" height="${h}" rx="6" fill="var(--t-${tone}-bg)" stroke="var(--t-${tone}-ink)" stroke-opacity=".25"/><text class="val" x="${x + bw * 0.28}" y="${y - 7}" text-anchor="middle">${fmtPct(d.rate)}</text><text x="${x + bw * 0.28}" y="${H - B + 18}" text-anchor="middle">${d.name}</text>`; });
+  return svg + `</svg>`;
+}
+function rates(list) { return DATES.map((_, m) => pct(list.filter(e => met(e, m)).length, list.length) ?? 0); }
+function lineChart(list, month, height = 320) {
+  const data = rates(list), W = 760, H = height, L = 44, B = 36, T = 26;
+  const x = i => L + (W - L - 24) * i / (DATES.length - 1), y = v => T + (H - T - B) * (1 - v / 100);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="달성률 추이 꺾은선 그래프">`;
+  for (const v of [0, 25, 50, 75, 100]) svg += `<line x1="${L}" x2="${W - 10}" y1="${y(v)}" y2="${y(v)}" stroke="#e8ebf1"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`;
+  const path = data.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ");
+  svg += `<path d="${path} L${x(DATES.length - 1)},${y(0)} L${x(0)},${y(0)} Z" fill="var(--primary)" opacity=".07"/>`;
+  svg += `<path d="${data.slice(0, month + 1).map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ")}" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  svg += `<path d="${path}" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="4 5" opacity=".35"/>`;
+  data.forEach((v, i) => { const on = i <= month;
+    svg += `<circle cx="${x(i)}" cy="${y(v)}" r="${i === month ? 7 : 4.5}" fill="${on ? "var(--primary)" : "#fff"}" stroke="var(--primary)" stroke-width="2" opacity="${on ? 1 : .45}"/>`;
+    if (on) svg += `<text class="val" x="${x(i)}" y="${y(v) - 13}" text-anchor="middle">${fmtPct(v)}</text>`;
+    svg += `<text x="${x(i)}" y="${H - B + 18}" text-anchor="middle" ${i === month ? `style="fill:var(--primary);font-weight:800"` : ""}>${DATES[i].slice(5)}</text>`; });
+  return svg + `</svg>`;
+}
+function donutChart(list, month) {
+  const counts = TIERS.map(t => list.filter(e => t.test(e.history[month])).length), total = list.length || 1;
+  const R = 104, C = 2 * Math.PI * R; let offset = 0;
+  let svg = `<svg class="chart" viewBox="0 0 760 300" role="img" aria-label="단계별 설비 수 원형 그래프"><g transform="translate(200 150) rotate(-90)">`;
+  TIERS.forEach((t, i) => { const len = C * counts[i] / total;
+    svg += `<circle r="${R}" fill="none" stroke="var(--t-${t.key}-bg)" stroke-width="44" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-offset}"/>`; offset += len; });
+  svg += `</g><text class="val" x="200" y="146" text-anchor="middle" style="font-size:30px">${list.length}</text><text x="200" y="168" text-anchor="middle">분석 대상(대)</text>`;
+  TIERS.forEach((t, i) => { const yy = 84 + i * 44;
+    svg += `<rect x="410" y="${yy - 13}" width="16" height="16" rx="4" fill="var(--t-${t.key}-bg)"/><text x="436" y="${yy}" style="font-size:13px;fill:var(--ink);font-weight:700">${t.label}</text><text class="val" x="700" y="${yy}" text-anchor="end">${counts[i]}대 · ${fmtPct(pct(counts[i], total))}</text>`; });
+  return svg + `</svg>`;
+}
+
+/* ── 버전 히트맵 ──────────────────────────────────────────────────────── */
+const heat = { by: "site", selected: null };
+const LAST = DATES.length - 1;
+$("heat-legend").innerHTML = legendHtml();
+$("heat-tabs").addEventListener("click", e => {
+  const button = e.target.closest("button"); if (!button) return;
+  heat.by = button.dataset.by;
+  document.querySelectorAll("#heat-tabs button").forEach(b => b.classList.toggle("on", b === button));
+  renderHeat();
+});
+["heat-risk", "heat-below"].forEach(id => $(id).addEventListener("change", renderHeat));
+function tilesHtml(list, month, by, selected) {
+  const keyOf = { site: e => e.site, line: e => `${e.site} · ${e.line}`, group: e => e.group }[by];
+  const order = [];
+  if (by === "group") GROUPS.forEach(g => order.push(g.name));
+  else for (const s of SITES) { if (by === "site") order.push(s.name); else s.lines.forEach(([l]) => order.push(`${s.name} · ${l}`)); }
+  return order.map(key => {
+    const items = list.filter(e => keyOf(e) === key); if (!items.length) return "";
+    const done = items.filter(e => met(e, month)).length;
+    return `<div class="group"><h4>${key}<small class="num">${done}/${items.length}대 달성 · ${fmtPct(pct(done, items.length))}</small></h4><div class="tiles">${items.map(e => {
+      const t = tierOf(e.history[month]);
+      return `<button class="tile tone-${t.key} ${riskOf(e, month) ? "risk" : ""} ${selected === e.code ? "sel" : ""}" data-code="${e.code}" title="${e.code} · ${groupOf(e.group).versions[e.history[month]]}">${e.code}<small>${by === "group" ? e.line : e.group}</small></button>`; }).join("")}</div></div>`;
+  }).join("") || `<p style="padding:30px 0;text-align:center;color:var(--sub)">조건에 맞는 설비가 없습니다.</p>`;
+}
+function renderHeat() {
+  let list = EQUIPMENT;
+  $("heat-kpis").innerHTML = kpiHtml(list, LAST);
+  if ($("heat-risk").checked) list = list.filter(e => riskOf(e, LAST));
+  if ($("heat-below").checked) list = list.filter(e => !met(e, LAST));
+  $("heat-body").innerHTML = tilesHtml(list, LAST, heat.by, heat.selected);
+  const eq = EQUIPMENT.find(e => e.code === heat.selected);
+  $("heat-detail").innerHTML = eq ? equipmentDetail(eq, LAST) : `<h3>설비 상세</h3><p class="hint">칸 하나가 설비 한 대입니다. 칸을 누르면 현재 버전과 목표 버전, 위험 근거가 나옵니다.</p>`;
+}
+$("heat-body").addEventListener("click", e => {
+  const tile = e.target.closest(".tile"); if (!tile) return;
+  heat.selected = tile.dataset.code; renderHeat();
+});
+
+/* ── 버전 리플레이 ────────────────────────────────────────────────────── */
+const replay = { month: 0, timer: null, ms: 800 };
+const ICON = { play: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`, pause: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>` };
+$("rp-legend").innerHTML = legendHtml();
+$("rp-ticks").innerHTML = DATES.map(d => `<span>${d.slice(5)}</span>`).join("");
+$("rp-body").innerHTML = tilesHtml(EQUIPMENT, 0, "site", null);
+function renderReplay(animate) {
+  const m = replay.month;
+  $("rp-range").value = m;
+  $("rp-date").textContent = "기준일 " + DATES[m];
+  $("rp-rate").textContent = fmtPct(rates(EQUIPMENT)[m]);
+  $("rp-chart").innerHTML = lineChart(EQUIPMENT, m, 300);
+  document.querySelectorAll("#rp-ticks span").forEach((s, i) => s.classList.toggle("on", i === m));
+  document.querySelectorAll("#rp-body .tile").forEach(tile => {      // 칸을 새로 만들지 않고 달라진 칸만 색을 바꾼다
+    const eq = EQUIPMENT.find(e => e.code === tile.dataset.code), tone = "tone-" + tierOf(eq.history[m]).key;
+    const changed = !tile.classList.contains(tone);
+    tile.classList.remove("tone-strong", "tone-ok", "tone-warn", "tone-bad"); tile.classList.add(tone);
+    tile.classList.toggle("risk", !!riskOf(eq, m));
+    tile.title = `${eq.code} · ${groupOf(eq.group).versions[eq.history[m]]}`;
+    if (animate && changed) { tile.classList.remove("pop"); void tile.offsetWidth; tile.classList.add("pop"); }
+  });
+  document.querySelectorAll("#rp-body .group").forEach(group => {
+    const codes = [...group.querySelectorAll(".tile")].map(t => t.dataset.code), items = EQUIPMENT.filter(e => codes.includes(e.code));
+    const done = items.filter(e => met(e, m)).length;
+    group.querySelector("small").textContent = `${done}/${items.length}대 달성 · ${fmtPct(pct(done, items.length))}`;
+  });
+}
+function stop() { clearInterval(replay.timer); replay.timer = null; $("rp-play").innerHTML = ICON.play; $("rp-play").setAttribute("aria-label", "재생"); }
+function start() {
+  if (replay.month >= LAST) { replay.month = 0; renderReplay(false); }
+  $("rp-play").innerHTML = ICON.pause; $("rp-play").setAttribute("aria-label", "일시정지");
+  replay.timer = setInterval(() => { replay.month++; renderReplay(true); if (replay.month >= LAST) stop(); }, replay.ms);
+}
+$("rp-play").addEventListener("click", () => replay.timer ? stop() : start());
+$("rp-range").addEventListener("input", e => { stop(); replay.month = +e.target.value; renderReplay(true); });
+$("rp-speed").addEventListener("click", e => {
+  const button = e.target.closest("button"); if (!button) return;
+  replay.ms = +button.dataset.ms;
+  document.querySelectorAll("#rp-speed button").forEach(b => b.classList.toggle("on", b === button));
+  if (replay.timer) { stop(); start(); }
+});
+
+renderDash(); renderHeat(); stop(); renderReplay(false);
+</script>
+</body>
+</html>

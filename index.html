@@ -208,6 +208,17 @@
 // sleeps: true 인 프로젝트는 데모 클릭 시 웨이크업 안내를 띄운 뒤 이동합니다.
 const PROJECTS = [
   {
+    title: "VerMap",
+    emoji: "🗺️",
+    gradient: "linear-gradient(135deg,#1e3a8a,#3c5ce9)",
+    desc: "Excel로 수작업 관리하던 설비별 SW 버전 현황을 대시보드·히트맵·리플레이로 보여 주는 Windows 데스크톱 프로그램. 데모는 주요 화면을 예시 자료로 옮긴 웹 버전입니다.",
+    tags: ["Python", "PySide6(Qt)", "SQLAlchemy", "MySQL", "pytest"],
+    github: "",                       // 저장소 비공개 — 공개 전환 시 주소를 채우면 버튼이 나타납니다
+    demoUrl: "vermap/",
+    healthUrl: "vermap/",
+    sleeps: false,
+  },
+  {
     title: "eye-dont-care",
     emoji: "👁️",
     gradient: "linear-gradient(135deg,#312e81,#818cf8)",
@@ -294,7 +305,7 @@ PROJECTS.forEach((p, i) => {
         <a class="btn demo ${hasDemo ? "" : "disabled"}" ${hasDemo ? `href="${p.demoUrl}" target="_blank" rel="noopener" data-idx="${i}"` : ""}>
           ${hasDemo ? "라이브 데모" : "데모 준비 중"}
         </a>
-        <a class="btn gh" href="${p.github}" target="_blank" rel="noopener">GitHub</a>
+        ${p.github ? `<a class="btn gh" href="${p.github}" target="_blank" rel="noopener">GitHub</a>` : ""}
       </div>
     </div>`;
   grid.appendChild(card);

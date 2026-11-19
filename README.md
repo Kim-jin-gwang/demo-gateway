@@ -10,7 +10,7 @@
 
 여러 프로젝트의 라이브 데모를 **카드 목록 한 페이지**로 보여 주는 포트폴리오 사이트입니다. 빌드 과정이 없는 정적 사이트로 Cloudflare에 배포되며, push할 때마다 자동으로 재배포됩니다.
 
-카드 6개 중 3개는 이 저장소 안의 **전용 데모 프론트엔드**로, 나머지 3개는 **외부에 호스팅된 데모**로 연결됩니다. 전용 프론트엔드는 화면만 담당하고 연산은 Hugging Face Spaces API가 맡습니다.
+카드 7개 중 4개는 이 저장소 안의 **전용 데모 프론트엔드**로, 나머지 3개는 **외부에 호스팅된 데모**로 연결됩니다. 전용 프론트엔드는 화면만 담당하고 연산은 Hugging Face Spaces API가 맡습니다.
 
 ---
 
@@ -62,6 +62,7 @@
 
 | 프로젝트 | 데모 화면 | 연산·백엔드 |
 |---|---|---|
+| **VerMap** | 이 저장소 `vermap/` | 없음 — 화면 안에서 만든 예시 자료로 동작하는 정적 데모 |
 | **Cafe Focusing** | 이 저장소 `cafe-focusing/` | Hugging Face Space (GreenGlossary와 같은 Space 공유) |
 | **GreenGlossary** | 이 저장소 `greenglossary/` | Hugging Face Space (Cafe Focusing과 같은 Space 공유) |
 | **Review Analytics** | 이 저장소 `review-analytics/` | Hugging Face Space (전용) |
@@ -96,6 +97,7 @@
 demo-gateway/
 ├── index.html            # 게이트웨이 메인 — PROJECTS 배열 · 카드 렌더링 · 헬스체크 · 웨이크업 안내
 ├── cafe-focusing/        # Cafe-Focusing 전용 데모 프론트엔드
+├── vermap/               # VerMap 화면 데모 (대시보드 · 버전 히트맵 · 버전 리플레이)
 │   ├── index.html        #   드래그 앤 드롭·Ctrl+V 입력, 원본↔결과 비교 슬라이더
 │   └── sample.png        #   원클릭 체험용 샘플 이미지
 ├── greenglossary/        # GreenGlossary 데모 프론트엔드

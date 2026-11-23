@@ -1,29 +1,39 @@
-# 🚪 라이브 데모 게이트웨이 (demo-gateway)
+<div align="center">
+  <h1>라이브 데모 게이트웨이 (demo-gateway)</h1>
+  <h3>프로젝트별 웹 데모를 모아 보여 주는 정적 사이트</h3>
+  <p>프로젝트 라이브 데모를 한곳에 모았습니다.</p>
+  <p>
+    <strong>팀</strong> 개인 프로젝트<br />
+    <strong>개발 기간</strong> 2026.08 ~ 2026.09<br />
+    <strong>플랫폼</strong> 정적 웹 (HTML · CSS · JavaScript) · Cloudflare · Hugging Face Spaces API
+  </p>
+  <p><a href="https://demo-gateway.trealight112.workers.dev/">https://demo-gateway.trealight112.workers.dev/</a></p>
+</div>
 
-> **프로젝트 라이브 데모를 한곳에 모았습니다.**
->
-> **Project Date:** 2026.08 ~ 2026.09 · **개인 프로젝트**
->
-> **Platform:** 정적 웹 (HTML · CSS · JavaScript) · Cloudflare · Hugging Face Spaces API
->
-> **Live:** https://demo-gateway.trealight112.workers.dev/
+---
+
+## 📑 목차
+
+- [서비스 소개](#service-introduction)
+- [팀원 소개](#team)
+- [주요 기능](#features)
+- [기술 스택](#technology-stack)
+- [시스템 아키텍처](#system-architecture)
+- [ERD](#erd)
+- [핵심 기술](#technology-details)
+- [개발자 가이드](#getting-started)
+- [디렉터리 구조](#directory-structure)
+- [프로젝트 문서와 협업 규칙](#project-guide)
+
+---
+
+<a id="service-introduction"></a>
+
+## 💡 서비스 소개
 
 여러 프로젝트의 라이브 데모를 **카드 목록 한 페이지**로 보여 주는 포트폴리오 사이트입니다. 빌드 과정이 없는 정적 사이트로 Cloudflare에 배포되며, push할 때마다 자동으로 재배포됩니다.
 
 카드 7개 중 4개는 이 저장소 안의 **전용 데모 프론트엔드**로, 나머지 3개는 **외부에 호스팅된 데모**로 연결됩니다. 전용 프론트엔드는 화면만 담당하고 연산은 Hugging Face Spaces API가 맡습니다.
-
----
-
-## 📱 실제 화면
-
-| 프로젝트 목록 |
-|:---:|
-| <img src="docs/images/screenshots/01-home.png" width="640" alt="라이브 데모 목록 화면"/> |
-| 프로젝트 카드마다 서버 상태를 표시하고 데모와 저장소로 연결 |
-
----
-
-## 📖 프로젝트 개요
 
 데모들은 프로젝트마다 호스팅 위치가 다르고(이 저장소, Cloudflare Pages, Render), 무료 서버 특성상 잠들어 있다가 접속 시 깨어나는 데 최대 1분 정도 걸릴 수 있습니다.
 게이트웨이는 이 데모들을 **카드 한 장 + 상태 배지**로 한 페이지에 모읍니다.
@@ -32,7 +42,39 @@
 * **서버 상태를 먼저 알려 줌** — 접속하면 데모 서버에 핑을 보내 배지를 `온라인` / `슬립 중`으로 갱신
 * **빌드 없는 운영** — `index.html`의 `PROJECTS` 배열만 고치고 push하면 카드가 추가·활성화됨
 
-### 💡 주요 기능
+---
+
+<a id="team"></a>
+
+## 👥 팀원 소개
+
+<div align="center">
+<table align="center">
+  <tr>
+    <td align="center"><strong>김진광</strong><br />프로젝트 카드, 상태 표시, 데모 연결 구현</td>
+  </tr>
+</table>
+</div>
+
+---
+
+<a id="features"></a>
+
+## ✨ 주요 기능
+
+<table width="100%">
+  <thead>
+    <tr><th width="56%">화면</th><th width="44%">설명</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="56%"><a href="docs/images/screenshots/01-home.png"><img src="docs/images/screenshots/01-home.png" alt="라이브 데모 목록 화면" width="100%" /></a></td>
+      <td width="44%" valign="middle"><strong>프로젝트 목록</strong><br /><br />프로젝트 카드마다 서버 상태를 표시하고 데모와 저장소로 연결</td>
+    </tr>
+  </tbody>
+</table>
+
+### 기능 목록
 
 | 기능 | 설명 |
 |---|---|
@@ -44,7 +86,24 @@
 
 ---
 
-## 🏗️ 아키텍처 — 화면과 연산을 나눈 2-티어
+<a id="technology-stack"></a>
+
+## 🛠️ 기술 스택
+
+| 영역 | 스택 |
+|---|---|
+| **프론트엔드** | <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white"/> <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white"/> <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black"/> Pretendard (jsdelivr CDN) |
+| **데모 API 연동** | <img src="https://img.shields.io/badge/Hugging_Face_Spaces-FFD21E?style=flat-square&logo=huggingface&logoColor=black"/> `@gradio/client` (jsdelivr ESM) |
+| **호스팅** | <img src="https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white"/> push 시 자동 재배포 |
+| **외부 데모** | <img src="https://img.shields.io/badge/Cloudflare_Pages-F38020?style=flat-square&logo=cloudflarepages&logoColor=white"/> <img src="https://img.shields.io/badge/Render-000000?style=flat-square&logo=render&logoColor=white"/> |
+
+---
+
+<a id="system-architecture"></a>
+
+## 🏗️ 시스템 아키텍처
+
+### 서비스 구성
 
 **요청 흐름 (카드 클릭 → 데모 결과)**
 
@@ -58,7 +117,21 @@
 
 ---
 
-## 🧭 데모 구성
+<a id="erd"></a>
+
+## 🗄️ ERD
+
+카드 정보는 index.html의 PROJECTS 배열에 정의합니다. 관계형 데이터베이스를 사용하지 않습니다.
+
+---
+
+<a id="technology-details"></a>
+
+## 🔬 핵심 기술
+
+<a id="-데모-구성"></a>
+
+### 🧭 데모 구성
 
 | 프로젝트 | 데모 화면 | 연산·백엔드 |
 |---|---|---|
@@ -81,36 +154,12 @@
 
 ---
 
-## 🛠️ 기술 스택
+<a id="getting-started"></a>
 
-| 영역 | 스택 |
-|---|---|
-| **프론트엔드** | <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white"/> <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white"/> <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black"/> Pretendard (jsdelivr CDN) |
-| **데모 API 연동** | <img src="https://img.shields.io/badge/Hugging_Face_Spaces-FFD21E?style=flat-square&logo=huggingface&logoColor=black"/> `@gradio/client` (jsdelivr ESM) |
-| **호스팅** | <img src="https://img.shields.io/badge/Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white"/> push 시 자동 재배포 |
-| **외부 데모** | <img src="https://img.shields.io/badge/Cloudflare_Pages-F38020?style=flat-square&logo=cloudflarepages&logoColor=white"/> <img src="https://img.shields.io/badge/Render-000000?style=flat-square&logo=render&logoColor=white"/> |
+## 🚀 개발자 가이드
 
----
-
-## 📂 디렉터리 구조
-
-```text
-demo-gateway/
-├── index.html            # 게이트웨이 메인 — PROJECTS 배열 · 카드 렌더링 · 헬스체크 · 웨이크업 안내
-├── cafe-focusing/        # Cafe-Focusing 전용 데모 프론트엔드
-│   ├── index.html        #   드래그 앤 드롭·Ctrl+V 입력, 원본↔결과 비교 슬라이더
-│   └── sample.png        #   원클릭 체험용 샘플 이미지
-├── vermap/               # VerMap 화면 데모 (대시보드 · 버전 히트맵 · 버전 리플레이)
-├── meonggo/              # 멍고반점 화면 데모 (실종 등록 · 유사도 분석 · 입양 소개팅)
-├── greenglossary/        # GreenGlossary 데모 프론트엔드
-│   └── index.html        #   문장 입력 → 순화 결과·바뀐 용어 표시
-└── review-analytics/     # Review Analytics 데모 프론트엔드
-    └── index.html        #   리뷰 입력·파일 업로드 → 감성 비율·키워드·문장 단위 판정
-```
-
----
-
-## 🚀 실행 방법
+<details>
+<summary><strong>소스에서 실행하고 테스트하기</strong></summary>
 
 **요구 사항:** 웹 브라우저 · 정적 파일 서버 (빌드 도구·의존성 설치 없음)
 
@@ -137,3 +186,43 @@ python -m http.server 8000   # 저장소 루트에서 실행 후 http://localhos
 1. `<프로젝트명>/index.html` 생성 — 게이트웨이의 CSS 변수·레이아웃 관례를 따름
 2. `@gradio/client`(jsdelivr ESM)로 해당 HF Space API 연동
 3. `PROJECTS` 배열에 `demoUrl: "<프로젝트명>/"` 설정 후 push
+
+</details>
+
+---
+
+<a id="directory-structure"></a>
+
+## 📁 디렉터리 구조
+
+<details>
+<summary><strong>주요 디렉터리 보기</strong></summary>
+
+```text
+demo-gateway/
+├── index.html            # 게이트웨이 메인 — PROJECTS 배열 · 카드 렌더링 · 헬스체크 · 웨이크업 안내
+├── cafe-focusing/        # Cafe-Focusing 전용 데모 프론트엔드
+│   ├── index.html        #   드래그 앤 드롭·Ctrl+V 입력, 원본↔결과 비교 슬라이더
+│   └── sample.png        #   원클릭 체험용 샘플 이미지
+├── vermap/               # VerMap 화면 데모 (대시보드 · 버전 히트맵 · 버전 리플레이)
+├── meonggo/              # 멍고반점 화면 데모 (실종 등록 · 유사도 분석 · 입양 소개팅)
+├── greenglossary/        # GreenGlossary 데모 프론트엔드
+│   └── index.html        #   문장 입력 → 순화 결과·바뀐 용어 표시
+└── review-analytics/     # Review Analytics 데모 프론트엔드
+    └── index.html        #   리뷰 입력·파일 업로드 → 감성 비율·키워드·문장 단위 판정
+```
+
+</details>
+
+---
+
+<a id="project-guide"></a>
+
+## 📚 프로젝트 문서와 협업 규칙
+
+<details>
+<summary><strong>문서와 협업 규칙 보기</strong></summary>
+
+[카드 목록과 설정](index.html) · [화면 자료](docs/)
+
+</details>
